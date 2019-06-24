@@ -86,7 +86,7 @@ fn main() {
                         }
                     }
                 },
-                &Method::POST => {
+                &Method::POST | &Method::PUT => {
                     let path = req.uri().path();
                     let connection_flags = path_to_connection_flags_guard.get_mut(path);
                     let mut flags = match connection_flags {

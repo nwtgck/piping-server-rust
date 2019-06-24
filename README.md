@@ -15,5 +15,5 @@ Safe, Fast and No garbage collection (GC)
 
 ## Usage
 ```rs
-cargo run
+cargo run --release
 ```
