@@ -27,7 +27,7 @@ fn main() {
     // TODO: Hard code
     let port = 8080;
     // TODO: Hard code
-    let addr = ([127, 0, 0, 1], port).into();
+    let addr = ([0, 0, 0, 0], port).into();
 
     let path_to_sender_and_body: Arc<Mutex<HashMap<String, SenderAndBody>>> = Arc::new(Mutex::new(HashMap::new()));
     // TODO: Close detection and release disconnected senders or receivers and make it reusable
