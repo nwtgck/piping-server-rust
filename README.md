@@ -1,4 +1,6 @@
 # piping-server
+[![CircleCI](https://circleci.com/gh/nwtgck/piping-server-rust.svg?style=shield)](https://circleci.com/gh/nwtgck/piping-server-rust)
+
 [Piping Server](https://github.com/nwtgck/piping-server) written in Rust
 
 ## Purpose
