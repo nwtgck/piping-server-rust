@@ -173,7 +173,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "hyper"
-version = "0.12.31"
+version = "0.12.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bytes 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -345,7 +345,7 @@ name = "piping-server"
 version = "0.1.0-SNAPSHOT"
 dependencies = [
  "futures 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
- "hyper 0.12.31 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hyper 0.12.32 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -723,7 +723,7 @@ dependencies = [
 "checksum http 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)" = "eed324f0f0daf6ec10c474f150505af2c143f251722bf9dbd1261bd1f2ee2c1a"
 "checksum http-body 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6741c859c1b2463a423a1dbce98d418e6c3c3fc720fb0d45528657320920292d"
 "checksum httparse 1.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "e8734b0cfd3bc3e101ec59100e101c2eecd19282202e87808b3037b442777a83"
-"checksum hyper 0.12.31 (registry+https://github.com/rust-lang/crates.io-index)" = "6481fff8269772d4463253ca83c788104a7305cb3fb9136bc651a6211e46e03f"
+"checksum hyper 0.12.32 (registry+https://github.com/rust-lang/crates.io-index)" = "a64d71c1e77d39da024f06f5821ee00ad9c38febb90370bad1f07a94e0bc8793"
 "checksum indexmap 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7e81a7c05f79578dbc15793d8b619db9ba32b4577003ef3af1a91c416798c58d"
 "checksum iovec 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "dbe6e417e7d0975db6512b90796e8ce223145ac4e33c377e4a42882a0e88bb08"
 "checksum itoa 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "501266b7edd0174f8530248f87f99c88fbe60ca4ef3dd486835b8d8d53136f7f"
