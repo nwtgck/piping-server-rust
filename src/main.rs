@@ -69,6 +69,8 @@ fn main() {
                         let sender_and_body_opt = path_to_sender_and_body_guard.remove(path);
                         match sender_and_body_opt {
                             Some(SenderAndBody{response_sender, transferred_body: body}) => {
+                                // Remove connection flags
+                                path_to_connection_flags_guard.remove(path);
                                 response_sender.send(Response::new(Body::from("[INFO] Start sending\n"))).unwrap();
                                 Box::new(future::ok(body))
                             },
@@ -111,6 +113,8 @@ fn main() {
                         let sender_and_body_opt = path_to_sender_and_body_guard.remove(path);
                         match sender_and_body_opt {
                             Some(SenderAndBody{response_sender, transferred_body: _}) => {
+                                // Remove connection flags
+                                path_to_connection_flags_guard.remove(path);
                                 // Send request body into the existing receiver
                                 response_sender.send(Response::new(req.into_body())).unwrap();
                                 Box::new(future::ok(Response::new(Body::from("[INFO] Start sending\n"))))
