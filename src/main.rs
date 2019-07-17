@@ -7,6 +7,17 @@ use hyper::{Body, Response, Server, Request, Method};
 use hyper::rt::Future;
 use hyper::service::{service_fn};
 use futures::future;
+use structopt::StructOpt;
+
+/// Piping Server in Rust
+#[derive(StructOpt, Debug)]
+#[structopt(name = "piping-server")]
+#[structopt(rename_all = "kebab-case")]
+struct Opt {
+    /// Image width
+    #[structopt(long, default_value = "8080")]
+    http_port: u16,
+}
 
 struct SenderAndBody {
     // This is used to send body to the other. The other can be Piping Sever receiver if sender has first access. The other can be Piping Sever sender if receiver has first access.
@@ -21,11 +32,12 @@ struct ConnectionFlags {
     has_receiver: bool,
 }
 
-
 // TODO: Use some logger instead of print!()s
 fn main() {
-    // TODO: Hard code
-    let port = 8080;
+    // Parse options
+    let opt = Opt::from_args();
+
+    let port = opt.http_port;
     // TODO: Hard code
     let addr = ([0, 0, 0, 0], port).into();
 
