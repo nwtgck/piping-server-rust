@@ -27,3 +27,19 @@ Run a Piping server on <http://localhost:8181> by the following command.
 ```rs
  docker run -p 8181:8080 --init nwtgck/piping-server-rust
 ```
+
+### Server-side help
+
+```txt
+Piping Server in Rust
+
+USAGE:
+    piping-server [OPTIONS]
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+OPTIONS:
+        --http-port <http-port>    Image width [default: 8080]
+```
