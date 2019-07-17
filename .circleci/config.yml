@@ -1,0 +1,41 @@
+# (base: https://gist.github.com/zargony/de209b1a790c3cb2176c86405a51b33c)
+
+version: 2
+
+jobs:
+  build:
+    docker:
+      - image: circleci/rust:1
+    steps:
+      - checkout
+      - run:
+          name: Version information
+          command: |
+            rustc --version
+            cargo --version
+            rustup --version
+      - run:
+          name: Build all targets
+          command: cargo build --all --all-targets
+      - save_cache:
+          paths:
+            - /usr/local/cargo/registry
+            - target/debug/.fingerprint
+            - target/debug/build
+            - target/debug/deps
+          key: v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
+      - run:
+          name: Operational test
+          command: |
+            set -x
+            # Run a server
+            cargo run -- --http-port=8181 &
+            sleep 1
+            # Transfer data
+            echo "hello, world" | curl -T - localhost:8181/mypath &
+            diff <(echo "hello, world") <(curl localhost:8181/mypath)
+            # Make a large random file
+            dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=500M.dat
+            # Transfer large data
+            cat 500M.dat | curl -T - localhost:8181/mypath &
+            diff <(cat 500M.dat) <(curl localhost:8181/mypath)
