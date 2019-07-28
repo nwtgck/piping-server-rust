@@ -1,12 +1,13 @@
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
-use hyper;
-use hyper::{Body, Response, Server, Request, Method};
+use hyper::{Body, Response, Server, Request, Method, Chunk};
 use hyper::rt::Future;
 use hyper::service::{service_fn};
 use futures::sync::oneshot;
 use structopt::StructOpt;
+use futures::Async;
+use futures::sink::Sink;
 
 /// Piping Server in Rust
 #[derive(StructOpt, Debug)]
@@ -36,10 +37,48 @@ fn req_res_handler<F>(mut handler: F) -> impl FnMut(Request<Body>) -> oneshot::R
     }
 }
 
+struct ReceiverResBody {
+    sender_req_body: Body,
+    sender_res_body_sender: hyper::body::Sender,
+}
+
+impl futures::stream::Stream for ReceiverResBody {
+    type Item = Chunk;
+    type Error = hyper::Error;
+
+    fn poll(&mut self) -> Result<Async<Option<Self::Item>>, Self::Error> {
+        match self.sender_req_body.poll() {
+            // If sender's response body is finished
+            Ok(Async::Ready(None)) => {
+                // Notify sender when sending finished
+                self.sender_res_body_sender.send_data(Chunk::from("[INFO] Sent successfully!\n")).unwrap();
+                // Close sender's response body
+                self.sender_res_body_sender.close().unwrap();
+                Ok(Async::Ready(None))
+            },
+            r@ _ => r
+        }
+    }
+}
+
 fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
     println!("Transfer start: '{}'", path);
-    receiver_req_res.res_sender.send(Response::new(sender_req_res.req.into_body())).unwrap();
-    sender_req_res.res_sender.send(Response::new(Body::from("[INFO] Start sending...\n"))).unwrap();
+
+    // For streaming sender's response body
+    let (mut sender_res_body_sender, sender_res_body) = Body::channel();
+
+    // Notify sender when sending starts
+    sender_res_body_sender.send_data(Chunk::from("[INFO] Start sending...\n")).unwrap();
+    // Create receiver's body
+    let receiver_res_body = Body::wrap_stream(ReceiverResBody {
+        sender_req_body: sender_req_res.req.into_body(),
+        sender_res_body_sender
+    });
+
+    // Return response to receiver
+    receiver_req_res.res_sender.send(Response::new( receiver_res_body )).unwrap();
+    // Return response to sender
+    sender_req_res.res_sender.send(Response::new(sender_res_body)).unwrap();
 }
 
 // TODO: Use some logger instead of print!()s
