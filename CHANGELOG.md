@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.2.1] - 2019-07-28
+### Fixed
+*  Not close sender's connection when transferring throw Caddy reverse proxy
+
 ## [0.2.0] - 2019-07-27
 ### Changed
 * Use req-res handler like Node.js
@@ -14,5 +18,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.1.0...v0.2.0
