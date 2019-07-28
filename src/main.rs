@@ -7,7 +7,6 @@ use hyper::service::{service_fn};
 use futures::sync::oneshot;
 use structopt::StructOpt;
 use futures::Async;
-use futures::sink::Sink;
 
 /// Piping Server in Rust
 #[derive(StructOpt, Debug)]
@@ -37,26 +36,35 @@ fn req_res_handler<F>(mut handler: F) -> impl FnMut(Request<Body>) -> oneshot::R
     }
 }
 
-struct ReceiverResBody {
-    sender_req_body: Body,
-    sender_res_body_sender: hyper::body::Sender,
+struct FinishDetectableBody {
+    body: Body,
+    finish_notifier: Option<oneshot::Sender<()>>,
 }
 
-impl futures::stream::Stream for ReceiverResBody {
+impl futures::stream::Stream for FinishDetectableBody {
     type Item = Chunk;
     type Error = hyper::Error;
 
     fn poll(&mut self) -> Result<Async<Option<Self::Item>>, Self::Error> {
-        match self.sender_req_body.poll() {
-            // If sender's response body is finished
+        match self.body.poll() {
+            // If body is finished
             Ok(Async::Ready(None)) => {
-                // Notify sender when sending finished
-                self.sender_res_body_sender.send_data(Chunk::from("[INFO] Sent successfully!\n")).unwrap();
-                // Close sender's response body
-                self.sender_res_body_sender.close().unwrap();
+                // Notify finish
+                if let Some(notifier) = self.finish_notifier.take() {
+                    notifier.send(()).unwrap();
+                }
                 Ok(Async::Ready(None))
             },
             r@ _ => r
+        }
+    }
+}
+
+impl FinishDetectableBody {
+    fn new(body: Body, finish_notifier: oneshot::Sender<()>) -> FinishDetectableBody {
+        FinishDetectableBody {
+            body,
+            finish_notifier: Some(finish_notifier)
         }
     }
 }
@@ -66,19 +74,28 @@ fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
 
     // For streaming sender's response body
     let (mut sender_res_body_sender, sender_res_body) = Body::channel();
+    // For notifying and waiting for sender's request body
+    let (sender_req_body_finish_notifier, sender_req_body_finish_waiter) = oneshot::channel::<()>();
 
     // Notify sender when sending starts
     sender_res_body_sender.send_data(Chunk::from("[INFO] Start sending...\n")).unwrap();
     // Create receiver's body
-    let receiver_res_body = Body::wrap_stream(ReceiverResBody {
-        sender_req_body: sender_req_res.req.into_body(),
-        sender_res_body_sender
-    });
-
+    let receiver_res_body = Body::wrap_stream(FinishDetectableBody::new(
+        sender_req_res.req.into_body(),
+        sender_req_body_finish_notifier
+    ));
     // Return response to receiver
     receiver_req_res.res_sender.send(Response::new( receiver_res_body )).unwrap();
     // Return response to sender
     sender_req_res.res_sender.send(Response::new(sender_res_body)).unwrap();
+
+    // Wait for sender's request body finished
+    hyper::rt::spawn(sender_req_body_finish_waiter.then(move |_| {
+        // Notify sender when sending finished
+        sender_res_body_sender.send_data(Chunk::from("[INFO] Sent successfully!\n")).unwrap();
+        println!("Transfer end: '{}'", path);
+        Ok(())
+    }));
 }
 
 // TODO: Use some logger instead of print!()s
