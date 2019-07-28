@@ -1,6 +1,6 @@
 [package]
 name = "piping-server"
-version = "0.2.2-SNAPSHOT"
+version = "0.2.2"
 authors = ["Ryo Ota <nwtgck@gmail.com>"]
 edition = "2018"
 
