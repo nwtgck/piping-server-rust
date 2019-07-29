@@ -1,6 +1,6 @@
 # NOTE: Multi-stage Build
 
-FROM rust:1.35 as build
+FROM rust:1.36.0 as build
 
 # (from: https://blog.rust-lang.org/2016/05/13/rustup.html)
 RUN rustup target add x86_64-unknown-linux-musl
