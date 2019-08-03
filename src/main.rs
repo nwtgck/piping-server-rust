@@ -84,10 +84,22 @@ fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
         sender_req_res.req.into_body(),
         sender_req_body_finish_notifier
     ));
+    // Create receiver's response
+    let receiver_res = Response::builder()
+        .header("Access-Control-Allow-Origin", "*")
+        .header("Access-Control-Expose-Headers", "Content-Length, Content-Type")
+        .body(receiver_res_body)
+        .unwrap();
     // Return response to receiver
-    receiver_req_res.res_sender.send(Response::new( receiver_res_body )).unwrap();
+    receiver_req_res.res_sender.send(receiver_res).unwrap();
+
+    // Create sender's response
+    let sender_res = Response::builder()
+        .header("Access-Control-Allow-Origin", "*")
+        .body(sender_res_body)
+        .unwrap();
     // Return response to sender
-    sender_req_res.res_sender.send(Response::new(sender_res_body)).unwrap();
+    sender_req_res.res_sender.send(sender_res).unwrap();
 
     // Wait for sender's request body finished
     hyper::rt::spawn(sender_req_body_finish_waiter.then(move |_| {
@@ -127,6 +139,7 @@ fn main() {
                     if path_to_receiver_guard.contains_key(path) {
                         let res = Response::builder()
                             .status(400)
+                            .header("Access-Control-Allow-Origin", "*")
                             .body(Body::from(format!("[ERROR] Another receiver has been connected on '{}'.\n", path)))
                             .unwrap();
                         res_sender.send(res).unwrap();
@@ -151,6 +164,7 @@ fn main() {
                     if path_to_sender_guard.contains_key(path) {
                         let res = Response::builder()
                             .status(400)
+                            .header("Access-Control-Allow-Origin", "*")
                             .body(Body::from(format!("[ERROR] Another sender has been connected on '{}'.\n", path)))
                             .unwrap();
                         res_sender.send(res).unwrap();
@@ -171,6 +185,7 @@ fn main() {
                     println!("Unsupported method: {}", req.method());
                     let res = Response::builder()
                         .status(400)
+                        .header("Access-Control-Allow-Origin", "*")
                         .body(Body::from(format!("[ERROR] Unsupported method: {}.\n", req.method())))
                         .unwrap();
                     res_sender.send(res).unwrap();
