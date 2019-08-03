@@ -195,6 +195,19 @@ fn main() {
                         }
                     }
                 },
+                &Method::OPTIONS => {
+                    // Response for Preflight request
+                    let res = Response::builder()
+                        .status(200)
+                        .header("Access-Control-Allow-Origin", "*")
+                        .header("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, OPTIONS")
+                        .header("Access-Control-Allow-Headers", "Content-Type, Content-Disposition")
+                        .header("Access-Control-Max-Age", 86400)
+                        .header("Content-Length", 0)
+                        .body(Body::empty())
+                        .unwrap();
+                    res_sender.send(res).unwrap();
+                },
                 _ => {
                     println!("Unsupported method: {}", req.method());
                     let res = Response::builder()
