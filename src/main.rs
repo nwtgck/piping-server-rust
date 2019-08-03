@@ -8,6 +8,9 @@ use futures::sync::oneshot;
 use structopt::StructOpt;
 use futures::Async;
 
+mod http_util;
+use http_util::OptionHeaderBuilder;
+
 /// Piping Server in Rust
 #[derive(StructOpt, Debug)]
 #[structopt(name = "piping-server")]
@@ -77,6 +80,13 @@ fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
     // For notifying and waiting for sender's request body
     let (sender_req_body_finish_notifier, sender_req_body_finish_waiter) = oneshot::channel::<()>();
 
+    // Get sender's header
+    let sender_header = sender_req_res.req.headers();
+    // Get sender's header values
+    let sender_content_type = sender_header.get("content-type").cloned();
+    let sender_content_length = sender_header.get("content-length").cloned();
+    let sender_content_disposition = sender_header.get("content-disposition").cloned();
+
     // Notify sender when sending starts
     sender_res_body_sender.send_data(Chunk::from("[INFO] Start sending...\n")).unwrap();
     // Create receiver's body
@@ -84,8 +94,12 @@ fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
         sender_req_res.req.into_body(),
         sender_req_body_finish_notifier
     ));
+
     // Create receiver's response
     let receiver_res = Response::builder()
+        .option_header("Content-Type", sender_content_type)
+        .option_header("Content-Length", sender_content_length)
+        .option_header("Content-Disposition", sender_content_disposition)
         .header("Access-Control-Allow-Origin", "*")
         .header("Access-Control-Expose-Headers", "Content-Length, Content-Type")
         .body(receiver_res_body)
