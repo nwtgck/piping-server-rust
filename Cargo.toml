@@ -1,6 +1,6 @@
 [package]
 name = "piping-server"
-version = "0.2.2"
+version = "0.3.0"
 authors = ["Ryo Ota <nwtgck@gmail.com>"]
 edition = "2018"
 
@@ -8,3 +8,4 @@ edition = "2018"
 hyper = "0.12"
 futures = "0.1"
 structopt = "0.2"
+http = "*"

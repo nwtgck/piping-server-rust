@@ -6,7 +6,9 @@ use hyper::rt::Future;
 use hyper::service::{service_fn};
 use futures::sync::oneshot;
 use structopt::StructOpt;
-use futures::Async;
+
+mod util;
+use util::{OptionHeaderBuilder, FinishDetectableBody};
 
 /// Piping Server in Rust
 #[derive(StructOpt, Debug)]
@@ -36,38 +38,6 @@ fn req_res_handler<F>(mut handler: F) -> impl FnMut(Request<Body>) -> oneshot::R
     }
 }
 
-struct FinishDetectableBody {
-    body: Body,
-    finish_notifier: Option<oneshot::Sender<()>>,
-}
-
-impl futures::stream::Stream for FinishDetectableBody {
-    type Item = Chunk;
-    type Error = hyper::Error;
-
-    fn poll(&mut self) -> Result<Async<Option<Self::Item>>, Self::Error> {
-        match self.body.poll() {
-            // If body is finished
-            Ok(Async::Ready(None)) => {
-                // Notify finish
-                if let Some(notifier) = self.finish_notifier.take() {
-                    notifier.send(()).unwrap();
-                }
-                Ok(Async::Ready(None))
-            },
-            r@ _ => r
-        }
-    }
-}
-
-impl FinishDetectableBody {
-    fn new(body: Body, finish_notifier: oneshot::Sender<()>) -> FinishDetectableBody {
-        FinishDetectableBody {
-            body,
-            finish_notifier: Some(finish_notifier)
-        }
-    }
-}
 
 fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
     println!("Transfer start: '{}'", path);
@@ -77,6 +47,13 @@ fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
     // For notifying and waiting for sender's request body
     let (sender_req_body_finish_notifier, sender_req_body_finish_waiter) = oneshot::channel::<()>();
 
+    // Get sender's header
+    let sender_header = sender_req_res.req.headers();
+    // Get sender's header values
+    let sender_content_type = sender_header.get("content-type").cloned();
+    let sender_content_length = sender_header.get("content-length").cloned();
+    let sender_content_disposition = sender_header.get("content-disposition").cloned();
+
     // Notify sender when sending starts
     sender_res_body_sender.send_data(Chunk::from("[INFO] Start sending...\n")).unwrap();
     // Create receiver's body
@@ -84,10 +61,26 @@ fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
         sender_req_res.req.into_body(),
         sender_req_body_finish_notifier
     ));
+
+    // Create receiver's response
+    let receiver_res = Response::builder()
+        .option_header("Content-Type", sender_content_type)
+        .option_header("Content-Length", sender_content_length)
+        .option_header("Content-Disposition", sender_content_disposition)
+        .header("Access-Control-Allow-Origin", "*")
+        .header("Access-Control-Expose-Headers", "Content-Length, Content-Type")
+        .body(receiver_res_body)
+        .unwrap();
     // Return response to receiver
-    receiver_req_res.res_sender.send(Response::new( receiver_res_body )).unwrap();
+    receiver_req_res.res_sender.send(receiver_res).unwrap();
+
+    // Create sender's response
+    let sender_res = Response::builder()
+        .header("Access-Control-Allow-Origin", "*")
+        .body(sender_res_body)
+        .unwrap();
     // Return response to sender
-    sender_req_res.res_sender.send(Response::new(sender_res_body)).unwrap();
+    sender_req_res.res_sender.send(sender_res).unwrap();
 
     // Wait for sender's request body finished
     hyper::rt::spawn(sender_req_body_finish_waiter.then(move |_| {
@@ -127,6 +120,7 @@ fn main() {
                     if path_to_receiver_guard.contains_key(path) {
                         let res = Response::builder()
                             .status(400)
+                            .header("Access-Control-Allow-Origin", "*")
                             .body(Body::from(format!("[ERROR] Another receiver has been connected on '{}'.\n", path)))
                             .unwrap();
                         res_sender.send(res).unwrap();
@@ -151,6 +145,7 @@ fn main() {
                     if path_to_sender_guard.contains_key(path) {
                         let res = Response::builder()
                             .status(400)
+                            .header("Access-Control-Allow-Origin", "*")
                             .body(Body::from(format!("[ERROR] Another sender has been connected on '{}'.\n", path)))
                             .unwrap();
                         res_sender.send(res).unwrap();
@@ -167,10 +162,24 @@ fn main() {
                         }
                     }
                 },
+                &Method::OPTIONS => {
+                    // Response for Preflight request
+                    let res = Response::builder()
+                        .status(200)
+                        .header("Access-Control-Allow-Origin", "*")
+                        .header("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, OPTIONS")
+                        .header("Access-Control-Allow-Headers", "Content-Type, Content-Disposition")
+                        .header("Access-Control-Max-Age", 86400)
+                        .header("Content-Length", 0)
+                        .body(Body::empty())
+                        .unwrap();
+                    res_sender.send(res).unwrap();
+                },
                 _ => {
                     println!("Unsupported method: {}", req.method());
                     let res = Response::builder()
                         .status(400)
+                        .header("Access-Control-Allow-Origin", "*")
                         .body(Body::from(format!("[ERROR] Unsupported method: {}.\n", req.method())))
                         .unwrap();
                     res_sender.send(res).unwrap();
