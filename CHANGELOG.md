@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.3.0] - 2019-08-03
+### Changed
+* Allow cross-origin
+* Pass sender's Content-Type, Content-Length and Content-Disposition headers to receiver
+* Support Preflight request
+
 ## [0.2.2] - 2019-07-28
 ### Changed
 * Generalize ReceiverResBody as FinishDetectableBody
@@ -22,7 +28,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/nwtgck/piping-server-rust/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.1.0...v0.2.0
