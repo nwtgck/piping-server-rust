@@ -8,8 +8,6 @@
       margin-bottom: 0.5em;
     }
   </style>
-  <!-- fetch polyfill -->
-  <script src="https://cdn.jsdelivr.net/npm/whatwg-fetch@3.0.0/dist/fetch.umd.js"></script>
 </head>
 <body>
 <h1>Piping</h1>
@@ -26,7 +24,8 @@ Streaming Data Transfer Server over HTTP/HTTPS
 (e.g. "abcd1234", "mysecret.png")<br>
 <input id="secret_path" placeholder="Secret path" size="50"><br>
 <h3>Step 3: Click the send button</h3>
-<button onclick="send()">Send</button>
+<button onclick="send()">Send</button><br>
+<progress id="progress_bar" value="0" max="100" style="display: none">0%</progress>
 <hr>
 GitHub repository:
 <a href="https://github.com/nwtgck/piping-server-rust#readme">
@@ -60,14 +59,31 @@ GitHub repository:
     return toggle;
   })();
 
+  function setProgress(progress) {
+    window.progress_bar.value = progress;
+    window.progress_bar.innerText = progress + "%";
+  }
+
   function send() {
     // Select body (text or file)
     var body = window.text_mode.checked ? window.text_input.value : window.file_input.files[0];
     // Send
-    fetch(location.href + window.secret_path.value, {
-      method: 'POST',
-      body: body
-    });
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', "/" + window.secret_path.value, true);
+    // Update progress bar
+    xhr.upload.onprogress = function (ev) {
+      var progress = ev.loaded / ev.total * 100;
+      setProgress(progress);
+    };
+    xhr.onreadystatechange = function() {
+      // Send finished
+      if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+        setProgress(100);
+      }
+    };
+    xhr.send(body);
+    // Show progress bar
+    window.progress_bar.style.display = null;
   }
 </script>
 </body>
