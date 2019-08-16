@@ -1,0 +1,6 @@
+{
+    "name": "Piping Server written in Rust",
+    "description": "Streaming Data Transfer Server over HTTP/HTTPS",
+    "repository": "https://github.com/nwtgck/piping-server-rust",
+    "keywords": ["transfer", "http", "server", "data-transfer"]
+}

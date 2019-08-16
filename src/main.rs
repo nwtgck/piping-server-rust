@@ -116,29 +116,53 @@ fn main() {
             println!("{} {}", req.method(), req.uri().path());
             match req.method() {
                 &Method::GET => {
-                    // If a receiver has been connected already
-                    if path_to_receiver_guard.contains_key(path) {
-                        let res = Response::builder()
-                            .status(400)
-                            .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from(format!("[ERROR] Another receiver has been connected on '{}'.\n", path)))
-                            .unwrap();
-                        res_sender.send(res).unwrap();
-                        return;
-                    }
-                    match path_to_sender_guard.remove(path) {
-                        // If sender is found
-                        Some(sender_req_res) => {
-                            transfer(path.to_string(), sender_req_res, ReqRes{req, res_sender});
+                    match path {
+                        "/" => {
+                            let res = Response::builder()
+                                .status(200)
+                                .header("Content-Type", "text/html")
+                                .header("Access-Control-Allow-Origin", "*")
+                                .body(Body::from(include_str!("../resource/index.html")))
+                                .unwrap();
+                            res_sender.send(res).unwrap();
                         },
-                        // If sender is not found
-                        None => {
-                            path_to_receiver_guard.insert(path.to_string(), ReqRes {
-                                req,
-                                res_sender,
-                            });
+                        "/version" => {
+                            let version: &'static str = env!("CARGO_PKG_VERSION");
+                            let res = Response::builder()
+                                .status(200)
+                                .header("Content-Type", "text/plain")
+                                .header("Access-Control-Allow-Origin", "*")
+                                .body(Body::from(format!("{} in Rust (Hyper)", version)))
+                                .unwrap();
+                            res_sender.send(res).unwrap();
+                        },
+                        _ => {
+                            // If a receiver has been connected already
+                            if path_to_receiver_guard.contains_key(path) {
+                                let res = Response::builder()
+                                    .status(400)
+                                    .header("Access-Control-Allow-Origin", "*")
+                                    .body(Body::from(format!("[ERROR] Another receiver has been connected on '{}'.\n", path)))
+                                    .unwrap();
+                                res_sender.send(res).unwrap();
+                                return;
+                            }
+                            match path_to_sender_guard.remove(path) {
+                                // If sender is found
+                                Some(sender_req_res) => {
+                                    transfer(path.to_string(), sender_req_res, ReqRes{req, res_sender});
+                                },
+                                // If sender is not found
+                                None => {
+                                    path_to_receiver_guard.insert(path.to_string(), ReqRes {
+                                        req,
+                                        res_sender,
+                                    });
+                                }
+                            }
                         }
                     }
+
                 },
                 &Method::POST | &Method::PUT => {
                     // If a sender has been connected already

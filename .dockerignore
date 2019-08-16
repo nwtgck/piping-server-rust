@@ -4,3 +4,4 @@
 /.idea
 /target
 /Dockerfile
+/heroku.yml
