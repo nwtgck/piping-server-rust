@@ -118,12 +118,21 @@ fn main() {
                 &Method::GET => {
                     match path {
                         "/" => {
-                            // Response for Preflight request
                             let res = Response::builder()
                                 .status(200)
                                 .header("Content-Type", "text/html")
                                 .header("Access-Control-Allow-Origin", "*")
                                 .body(Body::from(include_str!("../resource/index.html")))
+                                .unwrap();
+                            res_sender.send(res).unwrap();
+                        },
+                        "/version" => {
+                            let version: &'static str = env!("CARGO_PKG_VERSION");
+                            let res = Response::builder()
+                                .status(200)
+                                .header("Content-Type", "text/plain")
+                                .header("Access-Control-Allow-Origin", "*")
+                                .body(Body::from(format!("{} in Rust (Hyper)", version)))
                                 .unwrap();
                             res_sender.send(res).unwrap();
                         },
