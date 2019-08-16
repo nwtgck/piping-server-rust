@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.4.1] - 2019-08-16
+### Fixed
+* Specify `"stack": "container"` in app.json
+
 ## [0.4.0] - 2019-08-16
 ### Added
 * Add simple Web UI
@@ -34,7 +38,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/nwtgck/piping-server-rust/compare/v0.2.1...v0.2.2
