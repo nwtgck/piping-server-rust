@@ -29,7 +29,7 @@ RUN cp /tmp/main.rs src/main.rs
 RUN cargo build --release
 
 
-FROM ubuntu:18.04
+FROM ubuntu:19.10
 LABEL maintainer="Ryo Ota <nwtgck@gmail.com>"
 
 COPY --from=build /app/target/release/piping-server /app/target/release/piping-server
