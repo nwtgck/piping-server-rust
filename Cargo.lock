@@ -381,7 +381,7 @@ dependencies = [
 
 [[package]]
 name = "piping-server"
-version = "0.4.6"
+version = "0.4.7-SNAPSHOT"
 dependencies = [
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "http 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
