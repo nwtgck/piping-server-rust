@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.4.8] - 2019-11-08
+### Changed
+* Update simple Web UI
+
 ## [0.4.7] - 2019-10-16
 ### Changed
 * Update dependencies
@@ -62,7 +66,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.4.7...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.4.8...HEAD
+[0.4.8]: https://github.com/nwtgck/piping-server-rust/compare/v0.4.7...v0.4.8
 [0.4.7]: https://github.com/nwtgck/piping-server-rust/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/nwtgck/piping-server-rust/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/nwtgck/piping-server-rust/compare/v0.4.4...v0.4.5
