@@ -9,6 +9,8 @@ use structopt::StructOpt;
 
 mod util;
 use util::{OptionHeaderBuilder, FinishDetectableBody};
+use http::header::HeaderValue;
+use http::header::HeaderName;
 
 /// Piping Server in Rust
 #[derive(StructOpt, Debug)]
@@ -63,7 +65,7 @@ fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
     ));
 
     // Create receiver's response
-    let receiver_res = Response::builder()
+    let receiver_res = http::response::Builder::new()
         .option_header("Content-Type", sender_content_type)
         .option_header("Content-Length", sender_content_length)
         .option_header("Content-Disposition", sender_content_disposition)
@@ -72,6 +74,7 @@ fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
         .body(receiver_res_body)
         .unwrap();
     // Return response to receiver
+    // TODO: receiver_res is http::0.2.0 response and hyper's response is old
     receiver_req_res.res_sender.send(receiver_res).unwrap();
 
     // Create sender's response

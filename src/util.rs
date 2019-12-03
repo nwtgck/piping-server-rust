@@ -4,16 +4,20 @@ use futures::sync::oneshot;
 
 pub trait OptionHeaderBuilder {
     // Add optional header
-    fn option_header<K, V>(&mut self, key: K, value_opt: Option<V>) -> &mut Self
-        where http::header::HeaderName: http::HttpTryFrom<K>,
-              http::header::HeaderValue: http::HttpTryFrom<V>;
+    fn option_header<K, V>(self, key: K, value_opt: Option<V>) -> Self
+        where  http::header::HeaderName: std::convert::TryFrom<K>,
+               <http::header::HeaderName as std::convert::TryFrom<K>>::Error: Into<http::Error>,
+               http::header::HeaderValue: std::convert::TryFrom<V>,
+               <http::header::HeaderValue as std::convert::TryFrom<V>>::Error: Into<http::Error>;
 }
 
 impl OptionHeaderBuilder for http::response::Builder {
     // Add optional header
-    fn option_header<K, V>(&mut self, key: K, value_opt: Option<V>) -> &mut Self
-        where http::header::HeaderName: http::HttpTryFrom<K>,
-              http::header::HeaderValue: http::HttpTryFrom<V> {
+    fn option_header<K, V>(self, key: K, value_opt: Option<V>) -> Self
+        where  http::header::HeaderName: std::convert::TryFrom<K>,
+               <http::header::HeaderName as std::convert::TryFrom<K>>::Error: Into<http::Error>,
+               http::header::HeaderValue: std::convert::TryFrom<V>,
+               <http::header::HeaderValue as std::convert::TryFrom<V>>::Error: Into<http::Error>, {
         if let Some(value) = value_opt {
             self.header(key, value)
         } else {
