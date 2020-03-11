@@ -1,5 +1,9 @@
+#![feature(fn_traits)]
+#![feature(unboxed_closures)]
+
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
+use std::future::Future;
 
 use hyper::{Body, Response, Server, Request, Method};
 use hyper::body::Bytes;
@@ -7,11 +11,11 @@ use hyper::body::Bytes;
 use hyper::service::{service_fn, make_service_fn};
 use futures::channel::oneshot;
 use structopt::StructOpt;
-use tokio::prelude::*;
 
 mod util;
 use util::{OptionHeaderBuilder, FinishDetectableBody};
 use std::convert::Infallible;
+use futures::FutureExt;
 
 /// Piping Server in Rust
 #[derive(StructOpt, Debug)]
@@ -38,6 +42,28 @@ fn req_res_handler<F>(mut handler: F) -> impl FnMut(Request<Body>) -> oneshot::R
         let (res_sender, res_receiver) = oneshot::channel::<Response<Body>>();
         handler(req, res_sender);
         res_receiver
+    }
+}
+
+struct HoldOneReturnThatClosure<T> {
+    value: T,
+}
+
+impl<T> std::ops::FnOnce<((),)> for HoldOneReturnThatClosure<T> {
+    type Output = T;
+    extern "rust-call" fn call_once(self, args: ((),)) -> Self::Output {
+        self.value
+    }
+}
+
+// NOTE: oneshot::Receiver can be Future
+fn req_res_handler2<F, Fut>(mut handler: F) -> impl (FnMut(Request<Body>) -> futures::future::Then < Fut, oneshot::Receiver<Response<Body>>, HoldOneReturnThatClosure<oneshot::Receiver<Response<Body>>> > ) where
+    F: FnMut(Request<Body>, oneshot::Sender<Response<Body>>) -> Fut,
+    Fut: Future<Output=()>
+{
+    move |req| {
+        let (res_sender, res_receiver) = oneshot::channel::<Response<Body>>();
+        handler(req, res_sender).then(HoldOneReturnThatClosure{ value: res_receiver })
     }
 }
 
@@ -101,18 +127,13 @@ async fn main() {
     let port = opt.http_port;
     let addr: std::net::SocketAddr = ([0, 0, 0, 0], port).into();
 
-    // TODO:
-//    let path_to_sender: Arc<Mutex<HashMap<String, ReqRes>>> = Arc::new(Mutex::new(HashMap::new()));
-//    let path_to_receiver: Arc<Mutex<HashMap<String, ReqRes>>> = Arc::new(Mutex::new(HashMap::new()));
-
+    let path_to_sender: Arc<Mutex<HashMap<String, ReqRes>>> = Arc::new(Mutex::new(HashMap::new()));
+    let path_to_receiver: Arc<Mutex<HashMap<String, ReqRes>>> = Arc::new(Mutex::new(HashMap::new()));
 
     let svc = make_service_fn( move |_| {
-        let path_to_sender: Arc<Mutex<HashMap<String, ReqRes>>> = Arc::new(Mutex::new(HashMap::new()));
-        let path_to_receiver: Arc<Mutex<HashMap<String, ReqRes>>> = Arc::new(Mutex::new(HashMap::new()));
+        let path_to_sender = Arc::clone(&path_to_sender);
+        let path_to_receiver = Arc::clone(&path_to_receiver);
         async move {
-            let path_to_sender = Arc::clone(&path_to_sender);
-            let path_to_receiver = Arc::clone(&path_to_receiver);
-
             let handler = req_res_handler(move |req, res_sender| {
                 let mut path_to_sender_guard = path_to_sender.lock().unwrap();
                 let mut path_to_receiver_guard = path_to_receiver.lock().unwrap();
