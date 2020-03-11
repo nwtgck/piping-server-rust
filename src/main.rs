@@ -101,15 +101,19 @@ async fn main() {
     let port = opt.http_port;
     let addr: std::net::SocketAddr = ([0, 0, 0, 0], port).into();
 
-    let path_to_sender: Arc<Mutex<HashMap<String, ReqRes>>> = Arc::new(Mutex::new(HashMap::new()));
-    let path_to_receiver: Arc<Mutex<HashMap<String, ReqRes>>> = Arc::new(Mutex::new(HashMap::new()));
+    // TODO:
+//    let path_to_sender: Arc<Mutex<HashMap<String, ReqRes>>> = Arc::new(Mutex::new(HashMap::new()));
+//    let path_to_receiver: Arc<Mutex<HashMap<String, ReqRes>>> = Arc::new(Mutex::new(HashMap::new()));
 
 
-    let svc = make_service_fn( |_conn| async {
-//        let path_to_sender = Arc::clone(&path_to_sender);
-//        let path_to_receiver = Arc::clone(&path_to_receiver);
-//
-//        let handler = req_res_handler(move |req, res_sender| {
+    let svc = make_service_fn( move |_| {
+        let path_to_sender: Arc<Mutex<HashMap<String, ReqRes>>> = Arc::new(Mutex::new(HashMap::new()));
+        let path_to_receiver: Arc<Mutex<HashMap<String, ReqRes>>> = Arc::new(Mutex::new(HashMap::new()));
+        async move {
+            let path_to_sender = Arc::clone(&path_to_sender);
+            let path_to_receiver = Arc::clone(&path_to_receiver);
+
+        let handler = req_res_handler(move |req, res_sender| {
 //            let mut path_to_sender_guard = path_to_sender.lock().unwrap();
 //            let mut path_to_receiver_guard = path_to_receiver.lock().unwrap();
 //
@@ -211,12 +215,9 @@ async fn main() {
 //                    res_sender.send(res).unwrap();
 //                }
 //            }
-//        });
-//        // TODO: Remove
-        let handler = |_req: Request<Body>| async move {
-            Ok::<_, Infallible>(Response::<hyper::Body>::new("Hello, World".into()))
-        };
-        Ok::<_, Infallible>(service_fn(handler))
+            });
+            Ok::<_, Infallible>(service_fn(handler))
+        }
     });
     let server = Server::bind(&addr)
         .serve(svc);
