@@ -40,56 +40,54 @@ fn req_res_handler<F>(mut handler: F) -> impl FnMut(Request<Body>) -> oneshot::R
 }
 
 
-fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
+async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
     println!("Transfer start: '{}'", path);
 
-//    // For streaming sender's response body
-//    let (mut sender_res_body_sender, sender_res_body) = Body::channel();
-//    // For notifying and waiting for sender's request body
-//    let (sender_req_body_finish_notifier, sender_req_body_finish_waiter) = oneshot::channel::<()>();
-//
-//    // Get sender's header
-//    let sender_header = sender_req_res.req.headers();
-//    // Get sender's header values
-//    let sender_content_type = sender_header.get("content-type").cloned();
-//    let sender_content_length = sender_header.get("content-length").cloned();
-//    let sender_content_disposition = sender_header.get("content-disposition").cloned();
-//
-//    // Notify sender when sending starts
-//    sender_res_body_sender.send_data(Chunk::from("[INFO] Start sending...\n")).unwrap();
-//    // Create receiver's body
-//    let receiver_res_body = Body::wrap_stream(FinishDetectableBody::new(
-//        sender_req_res.req.into_body(),
-//        sender_req_body_finish_notifier
-//    ));
-//
-//    // Create receiver's response
-//    let receiver_res = Response::builder()
-//        .option_header("Content-Type", sender_content_type)
-//        .option_header("Content-Length", sender_content_length)
-//        .option_header("Content-Disposition", sender_content_disposition)
-//        .header("Access-Control-Allow-Origin", "*")
-//        .header("Access-Control-Expose-Headers", "Content-Length, Content-Type")
-//        .body(receiver_res_body)
-//        .unwrap();
-//    // Return response to receiver
-//    receiver_req_res.res_sender.send(receiver_res).unwrap();
-//
-//    // Create sender's response
-//    let sender_res = Response::builder()
-//        .header("Access-Control-Allow-Origin", "*")
-//        .body(sender_res_body)
-//        .unwrap();
-//    // Return response to sender
-//    sender_req_res.res_sender.send(sender_res).unwrap();
-//
-//    // Wait for sender's request body finished
-//    hyper::rt::spawn(sender_req_body_finish_waiter.then(move |_| {
-//        // Notify sender when sending finished
-//        sender_res_body_sender.send_data(Chunk::from("[INFO] Sent successfully!\n")).unwrap();
-//        println!("Transfer end: '{}'", path);
-//        Ok(())
-//    }));
+    // For streaming sender's response body
+    let (mut sender_res_body_sender, sender_res_body) = Body::channel();
+    // For notifying and waiting for sender's request body
+    let (sender_req_body_finish_notifier, sender_req_body_finish_waiter) = oneshot::channel::<()>();
+
+    // Get sender's header
+    let sender_header = sender_req_res.req.headers();
+    // Get sender's header values
+    let sender_content_type = sender_header.get("content-type").cloned();
+    let sender_content_length = sender_header.get("content-length").cloned();
+    let sender_content_disposition = sender_header.get("content-disposition").cloned();
+
+    // Notify sender when sending starts
+    sender_res_body_sender.send_data(Bytes::from("[INFO] Start sending...\n")).await;
+    // Create receiver's body
+    let receiver_res_body = Body::wrap_stream::<FinishDetectableBody, Bytes, http::Error>(FinishDetectableBody::new(
+        sender_req_res.req.into_body(),
+        sender_req_body_finish_notifier
+    ));
+
+    // Create receiver's response
+    let receiver_res = Response::builder()
+        .option_header("Content-Type", sender_content_type)
+        .option_header("Content-Length", sender_content_length)
+        .option_header("Content-Disposition", sender_content_disposition)
+        .header("Access-Control-Allow-Origin", "*")
+        .header("Access-Control-Expose-Headers", "Content-Length, Content-Type")
+        .body(receiver_res_body)
+        .unwrap();
+    // Return response to receiver
+    receiver_req_res.res_sender.send(receiver_res).unwrap();
+
+    // Create sender's response
+    let sender_res = Response::builder()
+        .header("Access-Control-Allow-Origin", "*")
+        .body(sender_res_body)
+        .unwrap();
+    // Return response to sender
+    sender_req_res.res_sender.send(sender_res).unwrap();
+
+    // Wait for sender's request body finished
+    sender_req_body_finish_waiter.await;
+    // Notify sender when sending finished
+    sender_res_body_sender.send_data(Bytes::from("[INFO] Sent successfully!\n")).await;
+    println!("Transfer end: '{}'", path);
 }
 
 // TODO: Use some logger instead of print!()s

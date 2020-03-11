@@ -36,7 +36,7 @@ pub struct FinishDetectableBody {
 
 
 impl futures::stream::Stream for FinishDetectableBody {
-    type Item = Bytes;
+    type Item = Result<Bytes, http::Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match self.as_mut().body_pin.as_mut().poll_next(cx) {
@@ -48,8 +48,8 @@ impl futures::stream::Stream for FinishDetectableBody {
                 }
                 Poll::Ready(None)
             },
-            Poll::Ready(Some(Ok(chunk))) => Poll::Ready(Some(chunk)),
-            Poll::Ready(Some(Err(_))) => Poll::Ready(Some(Bytes::from(""))),
+            Poll::Ready(Some(Ok(chunk))) => Poll::Ready(Some(Ok(chunk))),
+            Poll::Ready(Some(Err(_))) => Poll::Ready(Some(Ok(Bytes::from("")))),
             Poll::Pending => Poll::Pending
         }
     }
