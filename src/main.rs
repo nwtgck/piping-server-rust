@@ -33,31 +33,19 @@ struct ReqRes {
     res_sender: oneshot::Sender<Response<Body>>,
 }
 
-
-// NOTE: oneshot::Receiver can be Future
-fn req_res_handler<F>(mut handler: F) -> impl FnMut(Request<Body>) -> oneshot::Receiver<Response<Body>> where
-    F: FnMut(Request<Body>, oneshot::Sender<Response<Body>>) -> ()
-{
-    move |req| {
-        let (res_sender, res_receiver) = oneshot::channel::<Response<Body>>();
-        handler(req, res_sender);
-        res_receiver
-    }
-}
-
 struct HoldOneReturnThatClosure<T> {
     value: T,
 }
 
 impl<T> std::ops::FnOnce<((),)> for HoldOneReturnThatClosure<T> {
     type Output = T;
-    extern "rust-call" fn call_once(self, args: ((),)) -> Self::Output {
+    extern "rust-call" fn call_once(self, _args: ((),)) -> Self::Output {
         self.value
     }
 }
 
-// NOTE: oneshot::Receiver can be Future
-fn req_res_handler2<F, Fut>(mut handler: F) -> impl (FnMut(Request<Body>) -> futures::future::Then < Fut, oneshot::Receiver<Response<Body>>, HoldOneReturnThatClosure<oneshot::Receiver<Response<Body>>> > ) where
+// NOTE: futures::future::Then<..., oneshot::Receiver, ...> can be a Future
+fn req_res_handler<F, Fut>(mut handler: F) -> impl (FnMut(Request<Body>) -> futures::future::Then< Fut, oneshot::Receiver<Response<Body>>, HoldOneReturnThatClosure<oneshot::Receiver<Response<Body>>> > ) where
     F: FnMut(Request<Body>, oneshot::Sender<Response<Body>>) -> Fut,
     Fut: Future<Output=()>
 {
@@ -134,108 +122,113 @@ async fn main() {
         let path_to_sender = Arc::clone(&path_to_sender);
         let path_to_receiver = Arc::clone(&path_to_receiver);
         async move {
-            let handler = req_res_handler(move |req, res_sender| {
-                let mut path_to_sender_guard = path_to_sender.lock().unwrap();
-                let mut path_to_receiver_guard = path_to_receiver.lock().unwrap();
+            let handler = req_res_handler( move |req, res_sender|
+                {
+                    let path_to_sender = Arc::clone(&path_to_sender);
+                    let path_to_receiver = Arc::clone(&path_to_receiver);
+                    async move {
+                        let mut path_to_sender_guard = path_to_sender.lock().unwrap();
+                        let mut path_to_receiver_guard = path_to_receiver.lock().unwrap();
 
-                let path = req.uri().path();
+                        let path = req.uri().path();
 
-                println!("{} {}", req.method(), req.uri().path());
-                match req.method() {
-                    &Method::GET => {
-                        match path {
-                            "/" => {
-                                let res = Response::builder()
-                                    .status(200)
-                                    .header("Content-Type", "text/html")
-                                    .header("Access-Control-Allow-Origin", "*")
-                                    .body(Body::from(include_str!("../resource/index.html")))
-                                    .unwrap();
-                                res_sender.send(res).unwrap();
+                        println!("{} {}", req.method(), req.uri().path());
+                        match req.method() {
+                            &Method::GET => {
+                                match path {
+                                    "/" => {
+                                        let res = Response::builder()
+                                            .status(200)
+                                            .header("Content-Type", "text/html")
+                                            .header("Access-Control-Allow-Origin", "*")
+                                            .body(Body::from(include_str!("../resource/index.html")))
+                                            .unwrap();
+                                        res_sender.send(res).unwrap();
+                                    },
+                                    "/version" => {
+                                        let version: &'static str = env!("CARGO_PKG_VERSION");
+                                        let res = Response::builder()
+                                            .status(200)
+                                            .header("Content-Type", "text/plain")
+                                            .header("Access-Control-Allow-Origin", "*")
+                                            .body(Body::from(format!("{} in Rust (Hyper)", version)))
+                                            .unwrap();
+                                        res_sender.send(res).unwrap();
+                                    },
+                                    _ => {
+                                        // If a receiver has been connected already
+                                        if path_to_receiver_guard.contains_key(path) {
+                                            let res = Response::builder()
+                                                .status(400)
+                                                .header("Access-Control-Allow-Origin", "*")
+                                                .body(Body::from(format!("[ERROR] Another receiver has been connected on '{}'.\n", path)))
+                                                .unwrap();
+                                            res_sender.send(res).unwrap();
+                                            return;
+                                        }
+                                        match path_to_sender_guard.remove(path) {
+                                            // If sender is found
+                                            Some(sender_req_res) => {
+                                                transfer(path.to_string(), sender_req_res, ReqRes{req, res_sender});
+                                            },
+                                            // If sender is not found
+                                            None => {
+                                                path_to_receiver_guard.insert(path.to_string(), ReqRes {
+                                                    req,
+                                                    res_sender,
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+
                             },
-                            "/version" => {
-                                let version: &'static str = env!("CARGO_PKG_VERSION");
-                                let res = Response::builder()
-                                    .status(200)
-                                    .header("Content-Type", "text/plain")
-                                    .header("Access-Control-Allow-Origin", "*")
-                                    .body(Body::from(format!("{} in Rust (Hyper)", version)))
-                                    .unwrap();
-                                res_sender.send(res).unwrap();
-                            },
-                            _ => {
-                                // If a receiver has been connected already
-                                if path_to_receiver_guard.contains_key(path) {
+                            &Method::POST | &Method::PUT => {
+                                // If a sender has been connected already
+                                if path_to_sender_guard.contains_key(path) {
                                     let res = Response::builder()
                                         .status(400)
                                         .header("Access-Control-Allow-Origin", "*")
-                                        .body(Body::from(format!("[ERROR] Another receiver has been connected on '{}'.\n", path)))
+                                        .body(Body::from(format!("[ERROR] Another sender has been connected on '{}'.\n", path)))
                                         .unwrap();
                                     res_sender.send(res).unwrap();
                                     return;
                                 }
-                                match path_to_sender_guard.remove(path) {
-                                    // If sender is found
-                                    Some(sender_req_res) => {
-                                        transfer(path.to_string(), sender_req_res, ReqRes{req, res_sender});
+                                match path_to_receiver_guard.remove(path) {
+                                    // If receiver is found
+                                    Some(receiver_req_res) => {
+                                        transfer(path.to_string(),ReqRes{req, res_sender}, receiver_req_res);
                                     },
-                                    // If sender is not found
+                                    // If receiver is not found
                                     None => {
-                                        path_to_receiver_guard.insert(path.to_string(), ReqRes {
-                                            req,
-                                            res_sender,
-                                        });
+                                        path_to_sender_guard.insert(path.to_string(), ReqRes{req, res_sender});
                                     }
                                 }
-                            }
-                        }
-
-                    },
-                    &Method::POST | &Method::PUT => {
-                        // If a sender has been connected already
-                        if path_to_sender_guard.contains_key(path) {
-                            let res = Response::builder()
-                                .status(400)
-                                .header("Access-Control-Allow-Origin", "*")
-                                .body(Body::from(format!("[ERROR] Another sender has been connected on '{}'.\n", path)))
-                                .unwrap();
-                            res_sender.send(res).unwrap();
-                            return;
-                        }
-                        match path_to_receiver_guard.remove(path) {
-                            // If receiver is found
-                            Some(receiver_req_res) => {
-                                transfer(path.to_string(),ReqRes{req, res_sender}, receiver_req_res);
                             },
-                            // If receiver is not found
-                            None => {
-                                path_to_sender_guard.insert(path.to_string(), ReqRes{req, res_sender});
+                            &Method::OPTIONS => {
+                                // Response for Preflight request
+                                let res = Response::builder()
+                                    .status(200)
+                                    .header("Access-Control-Allow-Origin", "*")
+                                    .header("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, OPTIONS")
+                                    .header("Access-Control-Allow-Headers", "Content-Type, Content-Disposition")
+                                    .header("Access-Control-Max-Age", 86400)
+                                    .header("Content-Length", 0)
+                                    .body(Body::empty())
+                                    .unwrap();
+                                res_sender.send(res).unwrap();
+                            },
+                            _ => {
+                                println!("Unsupported method: {}", req.method());
+                                let res = Response::builder()
+                                    .status(400)
+                                    .header("Access-Control-Allow-Origin", "*")
+                                    .body(Body::from(format!("[ERROR] Unsupported method: {}.\n", req.method())))
+                                    .unwrap();
+                                res_sender.send(res).unwrap();
                             }
                         }
-                    },
-                    &Method::OPTIONS => {
-                        // Response for Preflight request
-                        let res = Response::builder()
-                            .status(200)
-                            .header("Access-Control-Allow-Origin", "*")
-                            .header("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, OPTIONS")
-                            .header("Access-Control-Allow-Headers", "Content-Type, Content-Disposition")
-                            .header("Access-Control-Max-Age", 86400)
-                            .header("Content-Length", 0)
-                            .body(Body::empty())
-                            .unwrap();
-                        res_sender.send(res).unwrap();
-                    },
-                    _ => {
-                        println!("Unsupported method: {}", req.method());
-                        let res = Response::builder()
-                            .status(400)
-                            .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from(format!("[ERROR] Unsupported method: {}.\n", req.method())))
-                            .unwrap();
-                        res_sender.send(res).unwrap();
                     }
-                }
             });
             Ok::<_, Infallible>(service_fn(handler))
         }
