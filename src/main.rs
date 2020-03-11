@@ -127,9 +127,6 @@ async fn main() {
                     let path_to_sender = Arc::clone(&path_to_sender);
                     let path_to_receiver = Arc::clone(&path_to_receiver);
                     async move {
-                        let mut path_to_sender_guard = path_to_sender.lock().unwrap();
-                        let mut path_to_receiver_guard = path_to_receiver.lock().unwrap();
-
                         let path = req.uri().path();
 
                         println!("{} {}", req.method(), req.uri().path());
@@ -156,8 +153,12 @@ async fn main() {
                                         res_sender.send(res).unwrap();
                                     },
                                     _ => {
+                                        let receiver_connected: bool = {
+                                            let mut path_to_receiver_guard = path_to_receiver.lock().unwrap();
+                                            path_to_receiver_guard.contains_key(path)
+                                        };
                                         // If a receiver has been connected already
-                                        if path_to_receiver_guard.contains_key(path) {
+                                        if receiver_connected {
                                             let res = Response::builder()
                                                 .status(400)
                                                 .header("Access-Control-Allow-Origin", "*")
@@ -166,13 +167,18 @@ async fn main() {
                                             res_sender.send(res).unwrap();
                                             return;
                                         }
-                                        match path_to_sender_guard.remove(path) {
+                                        let sender = {
+                                            let mut path_to_sender_guard = path_to_sender.lock().unwrap();
+                                            path_to_sender_guard.remove(path)
+                                        };
+                                        match sender {
                                             // If sender is found
                                             Some(sender_req_res) => {
-                                                transfer(path.to_string(), sender_req_res, ReqRes{req, res_sender});
+                                                transfer(path.to_string(), sender_req_res, ReqRes{req, res_sender}).await;
                                             },
                                             // If sender is not found
                                             None => {
+                                                let mut path_to_receiver_guard = path_to_receiver.lock().unwrap();
                                                 path_to_receiver_guard.insert(path.to_string(), ReqRes {
                                                     req,
                                                     res_sender,
@@ -184,8 +190,12 @@ async fn main() {
 
                             },
                             &Method::POST | &Method::PUT => {
+                                let sender_connected: bool = {
+                                    let mut path_to_sender_guard = path_to_sender.lock().unwrap();
+                                    path_to_sender_guard.contains_key(path)
+                                };
                                 // If a sender has been connected already
-                                if path_to_sender_guard.contains_key(path) {
+                                if sender_connected {
                                     let res = Response::builder()
                                         .status(400)
                                         .header("Access-Control-Allow-Origin", "*")
@@ -194,13 +204,18 @@ async fn main() {
                                     res_sender.send(res).unwrap();
                                     return;
                                 }
-                                match path_to_receiver_guard.remove(path) {
+                                let receiver = {
+                                    let mut path_to_receiver_guard = path_to_receiver.lock().unwrap();
+                                    path_to_receiver_guard.remove(path)
+                                };
+                                match receiver {
                                     // If receiver is found
                                     Some(receiver_req_res) => {
-                                        transfer(path.to_string(),ReqRes{req, res_sender}, receiver_req_res);
+                                        transfer(path.to_string(),ReqRes{req, res_sender}, receiver_req_res).await;
                                     },
                                     // If receiver is not found
                                     None => {
+                                        let mut path_to_sender_guard = path_to_sender.lock().unwrap();
                                         path_to_sender_guard.insert(path.to_string(), ReqRes{req, res_sender});
                                     }
                                 }
@@ -242,3 +257,6 @@ async fn main() {
     }
 }
 
+fn mydrop<T>(_a: T) {
+
+}
