@@ -4,12 +4,14 @@ use std::collections::HashMap;
 use hyper::{Body, Response, Server, Request, Method};
 use hyper::body::Bytes;
 //use hyper::rt::Future;
-use hyper::service::{service_fn};
+use hyper::service::{service_fn, make_service_fn};
 use futures::channel::oneshot;
 use structopt::StructOpt;
+use tokio::prelude::*;
 
 mod util;
 use util::{OptionHeaderBuilder, FinishDetectableBody};
+use std::convert::Infallible;
 
 /// Piping Server in Rust
 #[derive(StructOpt, Debug)]
@@ -91,7 +93,8 @@ async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes
 }
 
 // TODO: Use some logger instead of print!()s
-fn main() {
+#[tokio::main]
+async fn main() {
     // Parse options
     let opt = Opt::from_args();
 
@@ -102,7 +105,7 @@ fn main() {
     let path_to_receiver: Arc<Mutex<HashMap<String, ReqRes>>> = Arc::new(Mutex::new(HashMap::new()));
 
 
-//    let svc = move || {
+    let svc = make_service_fn( |_conn| async {
 //        let path_to_sender = Arc::clone(&path_to_sender);
 //        let path_to_receiver = Arc::clone(&path_to_receiver);
 //
@@ -209,13 +212,18 @@ fn main() {
 //                }
 //            }
 //        });
-//        service_fn(handler)
-//    };
-
-//    let server = Server::bind(&addr)
-//        .serve(svc)
-//        .map_err(|e| eprintln!("server error: {}", e));
+//        // TODO: Remove
+        let handler = |_req: Request<Body>| async move {
+            Ok::<_, Infallible>(Response::<hyper::Body>::new("Hello, World".into()))
+        };
+        Ok::<_, Infallible>(service_fn(handler))
+    });
+    let server = Server::bind(&addr)
+        .serve(svc);
 
     println!("server is running on {}...", port);
-//    hyper::rt::run(server);
+    if let Err(e) = server.await {
+        eprintln!("server error: {}", e);
+    }
 }
+

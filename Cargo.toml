@@ -9,3 +9,6 @@ hyper = { version = "0.13", features = ["stream"] }
 futures = "0.3"
 structopt = "0.3"
 http = "0.2"
+# (from: https://github.com/tokio-rs/tokio/issues/2075#issuecomment-572354676)
+tokio = { version = "0.2", features = ["macros", "tcp", "dns", "io-util"] }
+proc-macro2 = "1.0.7"
