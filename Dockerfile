@@ -11,20 +11,13 @@ COPY Cargo.toml /app/Cargo.toml
 COPY Cargo.lock /app/Cargo.lock
 RUN mkdir /app/src
 RUN echo "fn main() {}" > /app/src/main.rs
-RUN cd /app && cargo +nightly build --release
+RUN cd /app && cargo +nightly build
 RUN rm -r /app/src
 
 COPY . /app
 
 # Move to /app
 WORKDIR /app
-
-# Noop, but meaningful
-# (NOTE: Without this noop, `cargo +nightly build --release` will be done immediately)
-RUN cp src/main.rs /tmp/main.rs
-RUN echo "fn main() {}" > /app/src/main.rs
-RUN cargo +nightly build --release
-RUN cp /tmp/main.rs src/main.rs
 
 # Build
 RUN cargo +nightly build --release
