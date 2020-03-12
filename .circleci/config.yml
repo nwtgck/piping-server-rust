@@ -3,7 +3,7 @@
 version: 2
 
 jobs:
-  build:
+  build_and_operational_test:
     docker:
       - image: circleci/rust:1
     steps:
@@ -42,3 +42,17 @@ jobs:
             # Transfer large data
             cat 500M.dat | curl -T - localhost:8181/mypath &
             diff <(cat 500M.dat) <(curl localhost:8181/mypath)
+
+  docker_build:
+    machine: true
+    steps:
+      - checkout
+      # Check whether "docker build" is successful or not
+      - run: docker build -t piping-server-rust .
+
+workflows:
+  version: 2
+  tests:
+    jobs:
+      - build_and_operational_test
+      - docker_build
