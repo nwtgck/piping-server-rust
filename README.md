@@ -20,7 +20,7 @@ You can choose Cargo or Docker to run a server.
 
 ### Cargo
 ```rs
-cargo run --release
+cargo +nightly run --release
 ```
 
 ### Docker
