@@ -32,7 +32,7 @@ jobs:
           command: |
             set -x
             # Run a server
-            cargo run -- --http-port=8181 &
+            cargo +nightly run -- --http-port=8181 &
             sleep 1
             # Transfer data
             echo "hello, world" | curl -T - localhost:8181/mypath &
