@@ -7,7 +7,6 @@ use std::future::Future;
 
 use hyper::{Body, Response, Server, Request, Method};
 use hyper::body::Bytes;
-//use hyper::rt::Future;
 use hyper::service::{service_fn, make_service_fn};
 use futures::channel::oneshot;
 use structopt::StructOpt;
@@ -99,11 +98,13 @@ async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes
     // Return response to sender
     sender_req_res.res_sender.send(sender_res).unwrap();
 
-    // Wait for sender's request body finished
-    sender_req_body_finish_waiter.await;
-    // Notify sender when sending finished
-    sender_res_body_sender.send_data(Bytes::from("[INFO] Sent successfully!\n")).await;
-    println!("Transfer end: '{}'", path);
+    tokio::task::spawn(async move {
+        // Wait for sender's request body finished
+        sender_req_body_finish_waiter.await;
+        // Notify sender when sending finished
+        sender_res_body_sender.send_data(Bytes::from("[INFO] Sent successfully!\n")).await;
+        println!("Transfer end: '{}'", path);
+    });
 }
 
 // TODO: Use some logger instead of print!()s
@@ -255,8 +256,4 @@ async fn main() {
     if let Err(e) = server.await {
         eprintln!("server error: {}", e);
     }
-}
-
-fn mydrop<T>(_a: T) {
-
 }
