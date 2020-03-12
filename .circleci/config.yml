@@ -15,6 +15,9 @@ jobs:
             cargo --version
             rustup --version
       - run:
+          name: Install Nightly
+          command: rustup default nightly && rustup default stable
+      - run:
           name: Build all targets
           command: cargo +nightly build --all --all-targets
       - save_cache:
