@@ -3,8 +3,7 @@
 
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
-use std::future::Future;
-
+use std::convert::Infallible;
 use hyper::{Body, Response, Server, Request, Method};
 use hyper::body::Bytes;
 use hyper::service::{service_fn, make_service_fn};
@@ -12,9 +11,9 @@ use futures::channel::oneshot;
 use structopt::StructOpt;
 
 mod util;
+mod req_res_handler;
 use util::{OptionHeaderBuilder, FinishDetectableBody};
-use std::convert::Infallible;
-use futures::FutureExt;
+use req_res_handler::req_res_handler;
 
 /// Piping Server in Rust
 #[derive(StructOpt, Debug)]
@@ -31,29 +30,6 @@ struct ReqRes {
     req: Request<Body>,
     res_sender: oneshot::Sender<Response<Body>>,
 }
-
-struct HoldOneReturnThatClosure<T> {
-    value: T,
-}
-
-impl<T> std::ops::FnOnce<((),)> for HoldOneReturnThatClosure<T> {
-    type Output = T;
-    extern "rust-call" fn call_once(self, _args: ((),)) -> Self::Output {
-        self.value
-    }
-}
-
-// NOTE: futures::future::Then<..., oneshot::Receiver, ...> can be a Future
-fn req_res_handler<F, Fut>(mut handler: F) -> impl (FnMut(Request<Body>) -> futures::future::Then< Fut, oneshot::Receiver<Response<Body>>, HoldOneReturnThatClosure<oneshot::Receiver<Response<Body>>> > ) where
-    F: FnMut(Request<Body>, oneshot::Sender<Response<Body>>) -> Fut,
-    Fut: Future<Output=()>
-{
-    move |req| {
-        let (res_sender, res_receiver) = oneshot::channel::<Response<Body>>();
-        handler(req, res_sender).then(HoldOneReturnThatClosure{ value: res_receiver })
-    }
-}
-
 
 async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
     println!("Transfer start: '{}'", path);
