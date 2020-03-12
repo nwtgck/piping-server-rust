@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.5.0] - 2020-03-12
+### Changed
+* Update dependencies
+* Use new library features including async/await (only dev)
+
 ## [0.4.9] - 2019-12-22
 ### Changed
 * Update dependencies
@@ -70,7 +75,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.4.9...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.4.9...v0.5.0
 [0.4.9]: https://github.com/nwtgck/piping-server-rust/compare/v0.4.8...v0.4.9
 [0.4.8]: https://github.com/nwtgck/piping-server-rust/compare/v0.4.7...v0.4.8
 [0.4.7]: https://github.com/nwtgck/piping-server-rust/compare/v0.4.6...v0.4.7
