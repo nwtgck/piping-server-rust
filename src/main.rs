@@ -71,7 +71,7 @@ async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes
     let sender_content_disposition = sender_header.get("content-disposition").cloned();
 
     // Notify sender when sending starts
-    sender_res_body_sender.send_data(Bytes::from("[INFO] Start sending...\n")).await;
+    sender_res_body_sender.send_data(Bytes::from("[INFO] Start sending...\n")).await.unwrap();
     // Create receiver's body
     let receiver_res_body = Body::wrap_stream::<FinishDetectableBody, Bytes, http::Error>(FinishDetectableBody::new(
         sender_req_res.req.into_body(),
@@ -100,9 +100,9 @@ async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes
 
     tokio::task::spawn(async move {
         // Wait for sender's request body finished
-        sender_req_body_finish_waiter.await;
+        sender_req_body_finish_waiter.await.unwrap();
         // Notify sender when sending finished
-        sender_res_body_sender.send_data(Bytes::from("[INFO] Sent successfully!\n")).await;
+        sender_res_body_sender.send_data(Bytes::from("[INFO] Sent successfully!\n")).await.unwrap();
         println!("Transfer end: '{}'", path);
     });
 }
@@ -155,7 +155,7 @@ async fn main() {
                                     },
                                     _ => {
                                         let receiver_connected: bool = {
-                                            let mut path_to_receiver_guard = path_to_receiver.lock().unwrap();
+                                            let path_to_receiver_guard = path_to_receiver.lock().unwrap();
                                             path_to_receiver_guard.contains_key(path)
                                         };
                                         // If a receiver has been connected already
@@ -192,7 +192,7 @@ async fn main() {
                             },
                             &Method::POST | &Method::PUT => {
                                 let sender_connected: bool = {
-                                    let mut path_to_sender_guard = path_to_sender.lock().unwrap();
+                                    let path_to_sender_guard = path_to_sender.lock().unwrap();
                                     path_to_sender_guard.contains_key(path)
                                 };
                                 // If a sender has been connected already
