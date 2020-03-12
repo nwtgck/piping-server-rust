@@ -3,7 +3,7 @@
 version: 2
 
 jobs:
-  build:
+  build_and_operational_test:
     docker:
       - image: circleci/rust:1
     steps:
@@ -15,8 +15,11 @@ jobs:
             cargo --version
             rustup --version
       - run:
+          name: Install Nightly
+          command: rustup default nightly && rustup default stable
+      - run:
           name: Build all targets
-          command: cargo build --all --all-targets
+          command: cargo +nightly build --all --all-targets
       - save_cache:
           paths:
             - /usr/local/cargo/registry
@@ -29,7 +32,7 @@ jobs:
           command: |
             set -x
             # Run a server
-            cargo run -- --http-port=8181 &
+            cargo +nightly run -- --http-port=8181 &
             sleep 1
             # Transfer data
             echo "hello, world" | curl -T - localhost:8181/mypath &
@@ -39,3 +42,39 @@ jobs:
             # Transfer large data
             cat 500M.dat | curl -T - localhost:8181/mypath &
             diff <(cat 500M.dat) <(curl localhost:8181/mypath)
+
+  docker_test:
+    machine: true
+    steps:
+      - checkout
+      # Check whether "docker build" is successful or not
+      - run: docker build -t piping-server-rust .
+      - run:
+          name: Operational test with Docker image
+          command: |
+            set -eux
+            # Run a server
+            docker run -d -p 8080:80 --name=piping piping-server-rust --http-port=80
+            # Wait for server running
+            sleep 1
+            # Create a file to send
+            echo 'hello, world' > /tmp/hello.txt
+            # Send and wait for a receiver
+            curl -T /tmp/hello.txt localhost:8080/mypath &
+            # Get data as a file
+            curl localhost:8080/mypath > /tmp/download.txt
+            # Print downloaded file
+            cat  /tmp/download.txt
+            # Test the equality
+            diff /tmp/hello.txt /tmp/download.txt
+            # Print server log
+            docker logs piping
+            # Delete container
+            docker rm -f piping
+
+workflows:
+  version: 2
+  tests:
+    jobs:
+      - build_and_operational_test
+      - docker_test
