@@ -1,26 +1,29 @@
-use hyper::body::Body;
-use hyper::body::Bytes;
 use futures::channel::oneshot;
 use futures::task::{Context, Poll};
-use std::pin::Pin;
+use hyper::body::Body;
+use hyper::body::Bytes;
 use std::convert::TryFrom;
+use std::pin::Pin;
 
 pub trait OptionHeaderBuilder {
     // Add optional header
     fn option_header<K, V>(self, key: K, value_opt: Option<V>) -> Self
-        where http::header::HeaderName: TryFrom<K>,
-              <http::header::HeaderName as TryFrom<K>>::Error: Into<http::Error>,
-              http::header::HeaderValue: TryFrom<V>,
-              <http::header::HeaderValue as TryFrom<V>>::Error: Into<http::Error>;
+    where
+        http::header::HeaderName: TryFrom<K>,
+        <http::header::HeaderName as TryFrom<K>>::Error: Into<http::Error>,
+        http::header::HeaderValue: TryFrom<V>,
+        <http::header::HeaderValue as TryFrom<V>>::Error: Into<http::Error>;
 }
 
 impl OptionHeaderBuilder for http::response::Builder {
     // Add optional header
     fn option_header<K, V>(self, key: K, value_opt: Option<V>) -> Self
-        where http::header::HeaderName: TryFrom<K>,
-              <http::header::HeaderName as TryFrom<K>>::Error: Into<http::Error>,
-              http::header::HeaderValue: TryFrom<V>,
-              <http::header::HeaderValue as TryFrom<V>>::Error: Into<http::Error> {
+    where
+        http::header::HeaderName: TryFrom<K>,
+        <http::header::HeaderName as TryFrom<K>>::Error: Into<http::Error>,
+        http::header::HeaderValue: TryFrom<V>,
+        <http::header::HeaderValue as TryFrom<V>>::Error: Into<http::Error>,
+    {
         if let Some(value) = value_opt {
             self.header(key, value)
         } else {
@@ -34,7 +37,6 @@ pub struct FinishDetectableBody {
     finish_notifier: Option<oneshot::Sender<()>>,
 }
 
-
 impl futures::stream::Stream for FinishDetectableBody {
     type Item = Result<Bytes, http::Error>;
 
@@ -47,10 +49,10 @@ impl futures::stream::Stream for FinishDetectableBody {
                     notifier.send(()).unwrap();
                 }
                 Poll::Ready(None)
-            },
+            }
             Poll::Ready(Some(Ok(chunk))) => Poll::Ready(Some(Ok(chunk))),
             Poll::Ready(Some(Err(_))) => Poll::Ready(Some(Ok(Bytes::from("")))),
-            Poll::Pending => Poll::Pending
+            Poll::Pending => Poll::Pending,
         }
     }
 }
@@ -59,7 +61,7 @@ impl FinishDetectableBody {
     pub fn new(body: Body, finish_notifier: oneshot::Sender<()>) -> FinishDetectableBody {
         FinishDetectableBody {
             body_pin: Pin::from(Box::new(body)),
-            finish_notifier: Some(finish_notifier)
+            finish_notifier: Some(finish_notifier),
         }
     }
 }
