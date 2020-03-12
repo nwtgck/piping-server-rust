@@ -24,7 +24,7 @@ RUN cargo +nightly build --release
 
 
 FROM ubuntu:18.04
-LABEL maintainer="Ryo Ota <nwtgck@gmail.com>"
+LABEL maintainer="Ryo Ota <nwtgck@nwtgck.org>"
 
 COPY --from=build /app/target/release/piping-server /app/target/release/piping-server
 
