@@ -15,11 +15,8 @@ jobs:
             cargo --version
             rustup --version
       - run:
-          name: Install Nightly
-          command: rustup default nightly && rustup default stable
-      - run:
           name: Build all targets
-          command: cargo +nightly build --all --all-targets
+          command: cargo build --all --all-targets
       - save_cache:
           paths:
             - /usr/local/cargo/registry
@@ -32,7 +29,7 @@ jobs:
           command: |
             set -x
             # Run a server
-            cargo +nightly run -- --http-port=8181 &
+            cargo run -- --http-port=8181 &
             sleep 1
             # Transfer data
             echo "hello, world" | curl -T - localhost:8181/mypath &

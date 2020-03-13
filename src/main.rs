@@ -1,6 +1,3 @@
-#![feature(fn_traits)]
-#![feature(unboxed_closures)]
-
 use futures::channel::oneshot;
 use hyper::body::Bytes;
 use hyper::service::{make_service_fn, service_fn};
