@@ -1,5 +1,5 @@
 # NOTE: Multi-stage Build
-FROM rust:1.41.1 as build
+FROM rust:1.42.0 as build
 LABEL maintainer="Ryo Ota <nwtgck@nwtgck.org>"
 # (from: https://blog.rust-lang.org/2016/05/13/rustup.html)
 RUN rustup target add x86_64-unknown-linux-musl

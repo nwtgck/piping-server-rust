@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.5.2] - 2020-03-21
+### Changed
+* Update dependencies
+
 ## [0.5.1] - 2020-03-13
 ### Changed
 * Use stable, not nightly
@@ -79,7 +83,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/nwtgck/piping-server-rust/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.4.9...v0.5.0
 [0.4.9]: https://github.com/nwtgck/piping-server-rust/compare/v0.4.8...v0.4.9
