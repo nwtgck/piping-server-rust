@@ -5,8 +5,8 @@ use std::future::Future;
 
 
 // NOTE: futures::future::Then<..., oneshot::Receiver, ...> can be a Future
-pub fn req_res_handler<F, Fut>(
-    mut handler: F,
+pub fn req_res_handler<Fut>(
+    mut handler: impl FnMut(Request<Body>, oneshot::Sender<Response<Body>>) -> Fut,
 ) -> impl (FnMut(
     Request<Body>,
 ) -> futures::future::Then<
@@ -15,7 +15,6 @@ pub fn req_res_handler<F, Fut>(
     Box<dyn FnOnce((),) -> oneshot::Receiver<Response<Body>> + Send>,
 >)
 where
-    F: FnMut(Request<Body>, oneshot::Sender<Response<Body>>) -> Fut,
     Fut: Future<Output = ()>,
 {
     move |req| {
