@@ -1,16 +1,13 @@
-use futures::channel::oneshot;
-use hyper::body::Bytes;
 use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Method, Request, Response, Server};
-use std::collections::HashMap;
+use hyper::Server;
 use std::convert::Infallible;
-use std::sync::{Arc, Mutex};
 use structopt::StructOpt;
 
+mod piping_server;
 mod req_res_handler;
 mod util;
+use piping_server::PipingServer;
 use req_res_handler::req_res_handler;
-use util::{FinishDetectableBody, OptionHeaderBuilder};
 
 /// Piping Server in Rust
 #[derive(StructOpt, Debug)]
@@ -22,70 +19,6 @@ struct Opt {
     http_port: u16,
 }
 
-struct ReqRes {
-    req: Request<Body>,
-    res_sender: oneshot::Sender<Response<Body>>,
-}
-
-async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
-    println!("Transfer start: '{}'", path);
-
-    // For streaming sender's response body
-    let (mut sender_res_body_sender, sender_res_body) = Body::channel();
-    // For notifying and waiting for sender's request body
-    let (sender_req_body_finish_notifier, sender_req_body_finish_waiter) = oneshot::channel::<()>();
-
-    // Get sender's header
-    let sender_header = sender_req_res.req.headers();
-    // Get sender's header values
-    let sender_content_type = sender_header.get("content-type").cloned();
-    let sender_content_length = sender_header.get("content-length").cloned();
-    let sender_content_disposition = sender_header.get("content-disposition").cloned();
-
-    // Notify sender when sending starts
-    sender_res_body_sender
-        .send_data(Bytes::from("[INFO] Start sending...\n"))
-        .await
-        .unwrap();
-    // Create receiver's body
-    let receiver_res_body =
-        Body::wrap_stream::<FinishDetectableBody, Bytes, http::Error>(FinishDetectableBody::new(
-            sender_req_res.req.into_body(),
-            sender_req_body_finish_notifier,
-        ));
-
-    // Create receiver's response
-    let receiver_res = Response::builder()
-        .option_header("Content-Type", sender_content_type)
-        .option_header("Content-Length", sender_content_length)
-        .option_header("Content-Disposition", sender_content_disposition)
-        .header("Access-Control-Allow-Origin", "*")
-        .header("Access-Control-Expose-Headers", "Content-Length, Content-Type")
-        .body(receiver_res_body)
-        .unwrap();
-    // Return response to receiver
-    receiver_req_res.res_sender.send(receiver_res).unwrap();
-
-    // Create sender's response
-    let sender_res = Response::builder()
-        .header("Access-Control-Allow-Origin", "*")
-        .body(sender_res_body)
-        .unwrap();
-    // Return response to sender
-    sender_req_res.res_sender.send(sender_res).unwrap();
-
-    tokio::task::spawn(async move {
-        // Wait for sender's request body finished
-        sender_req_body_finish_waiter.await.unwrap();
-        // Notify sender when sending finished
-        sender_res_body_sender
-            .send_data(Bytes::from("[INFO] Sent successfully!\n"))
-            .await
-            .unwrap();
-        println!("Transfer end: '{}'", path);
-    });
-}
-
 // TODO: Use some logger instead of print!()s
 #[tokio::main]
 async fn main() {
@@ -95,159 +28,13 @@ async fn main() {
     let port = opt.http_port;
     let addr: std::net::SocketAddr = ([0, 0, 0, 0], port).into();
 
-    let path_to_sender: Arc<Mutex<HashMap<String, ReqRes>>> = Arc::new(Mutex::new(HashMap::new()));
-    let path_to_receiver: Arc<Mutex<HashMap<String, ReqRes>>> = Arc::new(Mutex::new(HashMap::new()));
+    let piping_server = PipingServer::new();
 
     let svc = make_service_fn(move |_| {
-        let path_to_sender = Arc::clone(&path_to_sender);
-        let path_to_receiver = Arc::clone(&path_to_receiver);
+        let piping_server = piping_server.clone();
         async move {
             let handler = req_res_handler(move |req, res_sender| {
-                let path_to_sender = Arc::clone(&path_to_sender);
-                let path_to_receiver = Arc::clone(&path_to_receiver);
-                async move {
-                    let path = req.uri().path();
-
-                    println!("{} {}", req.method(), req.uri().path());
-                    match req.method() {
-                        &Method::GET => {
-                            match path {
-                                "/" => {
-                                    let res = Response::builder()
-                                        .status(200)
-                                        .header("Content-Type", "text/html")
-                                        .header("Access-Control-Allow-Origin", "*")
-                                        .body(Body::from(include_str!("../resource/index.html")))
-                                        .unwrap();
-                                    res_sender.send(res).unwrap();
-                                }
-                                "/version" => {
-                                    let version: &'static str = env!("CARGO_PKG_VERSION");
-                                    let res = Response::builder()
-                                        .status(200)
-                                        .header("Content-Type", "text/plain")
-                                        .header("Access-Control-Allow-Origin", "*")
-                                        .body(Body::from(format!("{} in Rust (Hyper)", version)))
-                                        .unwrap();
-                                    res_sender.send(res).unwrap();
-                                }
-                                _ => {
-                                    let receiver_connected: bool = {
-                                        let path_to_receiver_guard =
-                                            path_to_receiver.lock().unwrap();
-                                        path_to_receiver_guard.contains_key(path)
-                                    };
-                                    // If a receiver has been connected already
-                                    if receiver_connected {
-                                        let res = Response::builder()
-                                                .status(400)
-                                                .header("Access-Control-Allow-Origin", "*")
-                                                .body(Body::from(format!("[ERROR] Another receiver has been connected on '{}'.\n", path)))
-                                                .unwrap();
-                                        res_sender.send(res).unwrap();
-                                        return;
-                                    }
-                                    let sender = {
-                                        let mut path_to_sender_guard =
-                                            path_to_sender.lock().unwrap();
-                                        path_to_sender_guard.remove(path)
-                                    };
-                                    match sender {
-                                        // If sender is found
-                                        Some(sender_req_res) => {
-                                            transfer(
-                                                path.to_string(),
-                                                sender_req_res,
-                                                ReqRes { req, res_sender },
-                                            )
-                                            .await;
-                                        }
-                                        // If sender is not found
-                                        None => {
-                                            let mut path_to_receiver_guard =
-                                                path_to_receiver.lock().unwrap();
-                                            path_to_receiver_guard.insert(
-                                                path.to_string(),
-                                                ReqRes { req, res_sender },
-                                            );
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        &Method::POST | &Method::PUT => {
-                            let sender_connected: bool = {
-                                let path_to_sender_guard = path_to_sender.lock().unwrap();
-                                path_to_sender_guard.contains_key(path)
-                            };
-                            // If a sender has been connected already
-                            if sender_connected {
-                                let res = Response::builder()
-                                    .status(400)
-                                    .header("Access-Control-Allow-Origin", "*")
-                                    .body(Body::from(format!(
-                                        "[ERROR] Another sender has been connected on '{}'.\n",
-                                        path
-                                    )))
-                                    .unwrap();
-                                res_sender.send(res).unwrap();
-                                return;
-                            }
-                            let receiver = {
-                                let mut path_to_receiver_guard = path_to_receiver.lock().unwrap();
-                                path_to_receiver_guard.remove(path)
-                            };
-                            match receiver {
-                                // If receiver is found
-                                Some(receiver_req_res) => {
-                                    transfer(
-                                        path.to_string(),
-                                        ReqRes { req, res_sender },
-                                        receiver_req_res,
-                                    )
-                                    .await;
-                                }
-                                // If receiver is not found
-                                None => {
-                                    let mut path_to_sender_guard = path_to_sender.lock().unwrap();
-                                    path_to_sender_guard
-                                        .insert(path.to_string(), ReqRes { req, res_sender });
-                                }
-                            }
-                        }
-                        &Method::OPTIONS => {
-                            // Response for Preflight request
-                            let res = Response::builder()
-                                .status(200)
-                                .header("Access-Control-Allow-Origin", "*")
-                                .header(
-                                    "Access-Control-Allow-Methods",
-                                    "GET, HEAD, POST, PUT, OPTIONS",
-                                )
-                                .header(
-                                    "Access-Control-Allow-Headers",
-                                    "Content-Type, Content-Disposition",
-                                )
-                                .header("Access-Control-Max-Age", 86400)
-                                .header("Content-Length", 0)
-                                .body(Body::empty())
-                                .unwrap();
-                            res_sender.send(res).unwrap();
-                        }
-                        _ => {
-                            println!("Unsupported method: {}", req.method());
-                            let res = Response::builder()
-                                .status(400)
-                                .header("Access-Control-Allow-Origin", "*")
-                                .body(Body::from(format!(
-                                    "[ERROR] Unsupported method: {}.\n",
-                                    req.method()
-                                )))
-                                .unwrap();
-                            res_sender.send(res).unwrap();
-                        }
-                    }
-                }
+                piping_server.clone().handler(req, res_sender)
             });
             Ok::<_, Infallible>(service_fn(handler))
         }
