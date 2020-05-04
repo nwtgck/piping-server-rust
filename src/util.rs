@@ -1,7 +1,5 @@
 use futures::channel::oneshot;
 use futures::task::{Context, Poll};
-use hyper::body::Body;
-use hyper::body::Bytes;
 use std::convert::TryFrom;
 use std::pin::Pin;
 
@@ -57,10 +55,14 @@ impl<S: futures::stream::Stream> futures::stream::Stream for FinishDetectableStr
 }
 
 impl<S> FinishDetectableStream<S> {
-    pub fn new(stream: S, finish_notifier: oneshot::Sender<()>) -> FinishDetectableStream<S> {
-        FinishDetectableStream {
-            stream_pin: Box::pin(stream),
-            finish_notifier: Some(finish_notifier),
-        }
+    pub fn new(stream: S) -> (FinishDetectableStream<S>, oneshot::Receiver<()>) {
+        let (finish_notifier, finish_waiter) = oneshot::channel::<()>();
+        (
+            FinishDetectableStream {
+                stream_pin: Box::pin(stream),
+                finish_notifier: Some(finish_notifier),
+            },
+            finish_waiter
+        )
     }
 }

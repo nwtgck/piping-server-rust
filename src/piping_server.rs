@@ -188,8 +188,6 @@ async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes
 
     // For streaming sender's response body
     let (mut sender_res_body_sender, sender_res_body) = Body::channel();
-    // For notifying and waiting for sender's request body
-    let (sender_req_body_finish_notifier, sender_req_body_finish_waiter) = oneshot::channel::<()>();
 
     // Get sender's header
     let sender_header = sender_req_res.req.headers();
@@ -203,12 +201,16 @@ async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes
         .send_data(Bytes::from("[INFO] Start sending...\n"))
         .await
         .unwrap();
+
+    // The finish_waiter will tell when the body is finished
+    let (finish_detectable_body, sender_req_body_finish_waiter) = FinishDetectableStream::new(
+        sender_req_res.req.into_body()
+    );
+
     // Create receiver's body
-    let receiver_res_body =
-        Body::wrap_stream::<FinishDetectableStream<Body>, Bytes, hyper::Error>(FinishDetectableStream::new(
-            sender_req_res.req.into_body(),
-            sender_req_body_finish_notifier,
-        ));
+    let receiver_res_body = Body::wrap_stream::<FinishDetectableStream<Body>, Bytes, hyper::Error>(
+        finish_detectable_body,
+    );
 
     // Create receiver's response
     let receiver_res = Response::builder()
