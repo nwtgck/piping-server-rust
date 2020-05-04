@@ -39,7 +39,7 @@ impl<S: futures::stream::Stream> futures::stream::Stream for FinishDetectableStr
     type Item = S::Item;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        match self.as_mut().stream_pin.as_mut().poll_next(cx) {
+        match self.stream_pin.as_mut().poll_next(cx) {
             // If body is finished
             Poll::Ready(None) => {
                 // Notify finish
