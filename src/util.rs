@@ -60,7 +60,7 @@ impl futures::stream::Stream for FinishDetectableBody {
 impl FinishDetectableBody {
     pub fn new(body: Body, finish_notifier: oneshot::Sender<()>) -> FinishDetectableBody {
         FinishDetectableBody {
-            body_pin: Pin::from(Box::new(body)),
+            body_pin: Box::pin(body),
             finish_notifier: Some(finish_notifier),
         }
     }
