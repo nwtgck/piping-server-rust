@@ -4,7 +4,7 @@ use hyper::{Body, Method, Request, Response};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use crate::util::{FinishDetectableStream, OptionHeaderBuilder};
+use crate::util::{finish_detectable_stream, FinishDetectableStream, OptionHeaderBuilder};
 
 struct ReqRes {
     req: Request<Body>,
@@ -203,7 +203,7 @@ async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes
         .unwrap();
 
     // The finish_waiter will tell when the body is finished
-    let (finish_detectable_body, sender_req_body_finish_waiter) = FinishDetectableStream::new(
+    let (finish_detectable_body, sender_req_body_finish_waiter) = finish_detectable_stream(
         sender_req_res.req.into_body()
     );
 

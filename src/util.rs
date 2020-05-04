@@ -53,15 +53,13 @@ impl<S: futures::stream::Stream> futures::stream::Stream for FinishDetectableStr
     }
 }
 
-impl<S> FinishDetectableStream<S> {
-    pub fn new(stream: S) -> (FinishDetectableStream<S>, oneshot::Receiver<()>) {
-        let (finish_notifier, finish_waiter) = oneshot::channel::<()>();
-        (
-            FinishDetectableStream {
-                stream_pin: Box::pin(stream),
-                finish_notifier: Some(finish_notifier),
-            },
-            finish_waiter
-        )
-    }
+pub fn finish_detectable_stream<S>(stream: S) -> (FinishDetectableStream<S>, oneshot::Receiver<()>) {
+    let (finish_notifier, finish_waiter) = oneshot::channel::<()>();
+    (
+        FinishDetectableStream {
+            stream_pin: Box::pin(stream),
+            finish_notifier: Some(finish_notifier),
+        },
+        finish_waiter
+    )
 }
