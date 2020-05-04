@@ -32,35 +32,34 @@ impl OptionHeaderBuilder for http::response::Builder {
     }
 }
 
-pub struct FinishDetectableBody {
-    body_pin: Pin<Box<Body>>,
+pub struct FinishDetectableStream<S> {
+    stream_pin: Pin<Box<S>>,
     finish_notifier: Option<oneshot::Sender<()>>,
 }
 
-impl futures::stream::Stream for FinishDetectableBody {
-    type Item = Result<Bytes, http::Error>;
+impl<S: futures::stream::Stream> futures::stream::Stream for FinishDetectableStream<S> {
+    type Item = S::Item;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        match self.as_mut().body_pin.as_mut().poll_next(cx) {
+        match self.as_mut().stream_pin.as_mut().poll_next(cx) {
             // If body is finished
             Poll::Ready(None) => {
                 // Notify finish
-                if let Some(notifier) = self.as_mut().finish_notifier.take() {
+                if let Some(notifier) = self.finish_notifier.take() {
                     notifier.send(()).unwrap();
                 }
                 Poll::Ready(None)
             }
-            Poll::Ready(Some(Ok(chunk))) => Poll::Ready(Some(Ok(chunk))),
-            Poll::Ready(Some(Err(_))) => Poll::Ready(Some(Ok(Bytes::from("")))),
+            Poll::Ready(Some(item)) => Poll::Ready(Some(item)),
             Poll::Pending => Poll::Pending,
         }
     }
 }
 
-impl FinishDetectableBody {
-    pub fn new(body: Body, finish_notifier: oneshot::Sender<()>) -> FinishDetectableBody {
-        FinishDetectableBody {
-            body_pin: Box::pin(body),
+impl<S> FinishDetectableStream<S> {
+    pub fn new(stream: S, finish_notifier: oneshot::Sender<()>) -> FinishDetectableStream<S> {
+        FinishDetectableStream {
+            stream_pin: Box::pin(stream),
             finish_notifier: Some(finish_notifier),
         }
     }
