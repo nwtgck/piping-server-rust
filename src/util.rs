@@ -48,8 +48,7 @@ impl<S: futures::stream::Stream> futures::stream::Stream for FinishDetectableStr
                 }
                 Poll::Ready(None)
             }
-            Poll::Ready(Some(item)) => Poll::Ready(Some(item)),
-            Poll::Pending => Poll::Pending,
+            poll => poll
         }
     }
 }
