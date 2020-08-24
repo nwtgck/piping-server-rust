@@ -39,8 +39,7 @@ async fn main() {
             Ok::<_, Infallible>(service_fn(handler))
         }
     });
-    let server = Server::bind(&addr)
-        .serve(svc);
+    let server = Server::bind(&addr).serve(svc);
 
     println!("server is running on {}...", port);
     if let Err(e) = server.await {

@@ -203,9 +203,8 @@ async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes
         .unwrap();
 
     // The finish_waiter will tell when the body is finished
-    let (finish_detectable_body, sender_req_body_finish_waiter) = finish_detectable_stream(
-        sender_req_res.req.into_body()
-    );
+    let (finish_detectable_body, sender_req_body_finish_waiter) =
+        finish_detectable_stream(sender_req_res.req.into_body());
 
     // Create receiver's body
     let receiver_res_body = Body::wrap_stream::<FinishDetectableStream<Body>, Bytes, hyper::Error>(

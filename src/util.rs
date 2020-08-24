@@ -48,18 +48,20 @@ impl<S: futures::stream::Stream> futures::stream::Stream for FinishDetectableStr
                 }
                 Poll::Ready(None)
             }
-            poll => poll
+            poll => poll,
         }
     }
 }
 
-pub fn finish_detectable_stream<S>(stream: S) -> (FinishDetectableStream<S>, oneshot::Receiver<()>) {
+pub fn finish_detectable_stream<S>(
+    stream: S,
+) -> (FinishDetectableStream<S>, oneshot::Receiver<()>) {
     let (finish_notifier, finish_waiter) = oneshot::channel::<()>();
     (
         FinishDetectableStream {
             stream_pin: Box::pin(stream),
             finish_notifier: Some(finish_notifier),
         },
-        finish_waiter
+        finish_waiter,
     )
 }
