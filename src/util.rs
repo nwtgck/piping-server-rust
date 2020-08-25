@@ -1,9 +1,9 @@
 use futures::channel::oneshot;
 use futures::task::{Context, Poll};
-use hyper::body::Body;
-use hyper::body::Bytes;
 use std::convert::TryFrom;
 use std::pin::Pin;
+use tokio::net::TcpStream;
+use tokio_rustls::server::TlsStream;
 
 pub trait OptionHeaderBuilder {
     // Add optional header
@@ -32,36 +32,85 @@ impl OptionHeaderBuilder for http::response::Builder {
     }
 }
 
-pub struct FinishDetectableBody {
-    body_pin: Pin<Box<Body>>,
+pub struct FinishDetectableStream<S> {
+    stream_pin: Pin<Box<S>>,
     finish_notifier: Option<oneshot::Sender<()>>,
 }
 
-impl futures::stream::Stream for FinishDetectableBody {
-    type Item = Result<Bytes, http::Error>;
+impl<S: futures::stream::Stream> futures::stream::Stream for FinishDetectableStream<S> {
+    type Item = S::Item;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        match self.as_mut().body_pin.as_mut().poll_next(cx) {
+        match self.stream_pin.as_mut().poll_next(cx) {
             // If body is finished
             Poll::Ready(None) => {
                 // Notify finish
-                if let Some(notifier) = self.as_mut().finish_notifier.take() {
+                if let Some(notifier) = self.finish_notifier.take() {
                     notifier.send(()).unwrap();
                 }
                 Poll::Ready(None)
             }
-            Poll::Ready(Some(Ok(chunk))) => Poll::Ready(Some(Ok(chunk))),
-            Poll::Ready(Some(Err(_))) => Poll::Ready(Some(Ok(Bytes::from("")))),
-            Poll::Pending => Poll::Pending,
+            poll => poll,
         }
     }
 }
 
-impl FinishDetectableBody {
-    pub fn new(body: Body, finish_notifier: oneshot::Sender<()>) -> FinishDetectableBody {
-        FinishDetectableBody {
-            body_pin: Pin::from(Box::new(body)),
+pub fn finish_detectable_stream<S>(
+    stream: S,
+) -> (FinishDetectableStream<S>, oneshot::Receiver<()>) {
+    let (finish_notifier, finish_waiter) = oneshot::channel::<()>();
+    (
+        FinishDetectableStream {
+            stream_pin: Box::pin(stream),
             finish_notifier: Some(finish_notifier),
-        }
+        },
+        finish_waiter,
+    )
+}
+
+pub fn make_io_error(err: String) -> std::io::Error {
+    std::io::Error::new(std::io::ErrorKind::Other, err)
+}
+
+// (base: https://github.com/ctz/hyper-rustls/blob/5f073724f7b5eee3a2d72f0a86094fc2718b51cd/examples/server.rs)
+pub fn load_tls_config(
+    cert_path: impl AsRef<std::path::Path>,
+    key_path: impl AsRef<std::path::Path> + std::fmt::Display,
+) -> std::io::Result<rustls::ServerConfig> {
+    // Load public certificate.
+    let mut cert_reader = std::io::BufReader::new(std::fs::File::open(cert_path)?);
+    let certs = rustls::internal::pemfile::certs(&mut cert_reader)
+        .map_err(|_| make_io_error("unable to load certificate".to_owned()))?;
+    // Load private key.
+    let mut key_reader = std::io::BufReader::new(std::fs::File::open(key_path)?);
+    // Load and return a single private key.
+    let key = rustls::internal::pemfile::pkcs8_private_keys(&mut key_reader)
+        .map_err(|_| make_io_error("unable to load private key".to_owned()))?
+        .remove(0);
+    // Do not use client certificate authentication.
+    let mut cfg = rustls::ServerConfig::new(rustls::NoClientAuth::new());
+    // Select a certificate to use.
+    cfg.set_single_cert(certs, key).unwrap();
+    // Configure ALPN to accept HTTP/2, HTTP/1.1 in that order.
+    cfg.set_protocols(&[b"h2".to_vec(), b"http/1.1".to_vec()]);
+    Ok(cfg)
+}
+
+pub struct HyperAcceptor<S> {
+    pub acceptor: core::pin::Pin<Box<S>>,
+}
+
+impl<S> hyper::server::accept::Accept for HyperAcceptor<S>
+where
+    S: futures::stream::Stream<Item = Result<TlsStream<TcpStream>, std::io::Error>>,
+{
+    type Conn = TlsStream<TcpStream>;
+    type Error = std::io::Error;
+
+    fn poll_accept(
+        mut self: core::pin::Pin<&mut Self>,
+        cx: &mut core::task::Context,
+    ) -> core::task::Poll<Option<Result<Self::Conn, Self::Error>>> {
+        self.acceptor.as_mut().poll_next(cx)
     }
 }

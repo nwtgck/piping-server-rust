@@ -1,6 +1,6 @@
 # NOTE: Multi-stage Build
 
-FROM rust:1.42.0 as build
+FROM rust:1.45.2 as build
 
 # (from: https://blog.rust-lang.org/2016/05/13/rustup.html)
 RUN rustup target add x86_64-unknown-linux-musl
@@ -24,6 +24,8 @@ RUN cargo build --release
 
 FROM ubuntu:18.04
 LABEL maintainer="Ryo Ota <nwtgck@nwtgck.org>"
+
+ENV RUST_LOG info
 
 COPY --from=build /app/target/release/piping-server /app/target/release/piping-server
 
