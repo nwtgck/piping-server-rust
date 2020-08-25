@@ -9,8 +9,7 @@ hyper = { version = "0.13", features = ["stream"] }
 futures = "0.3"
 structopt = "0.3"
 http = "0.2"
-# (from: https://github.com/tokio-rs/tokio/issues/2075#issuecomment-572354676)
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "0.2", features = ["macros", "stream"] }
 rustls = "0.18"
 hyper-rustls = "0.21"
 futures-util = "0.3"
