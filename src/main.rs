@@ -21,12 +21,15 @@ struct Opt {
     #[structopt(long, default_value = "8080")]
     http_port: u16,
     #[structopt(long)]
+    /// Enable HTTPS
     enable_https: bool,
     /// HTTPS port
     #[structopt(long)]
     https_port: Option<u16>,
+    /// Certification path
     #[structopt(long)]
     crt_path: Option<String>,
+    /// Private key path
     #[structopt(long)]
     key_path: Option<String>,
 }

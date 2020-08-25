@@ -39,13 +39,13 @@ USAGE:
     piping-server [FLAGS] [OPTIONS]
 
 FLAGS:
-        --enable-https
+        --enable-https    Enable HTTPS
     -h, --help            Prints help information
     -V, --version         Prints version information
 
 OPTIONS:
-        --crt-path <crt-path>
+        --crt-path <crt-path>        Certification path
         --http-port <http-port>      HTTP port [default: 8080]
         --https-port <https-port>    HTTPS port
-        --key-path <key-path>
+        --key-path <key-path>        Private key path
 ```
