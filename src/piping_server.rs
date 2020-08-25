@@ -183,7 +183,7 @@ impl PipingServer {
     }
 }
 
-async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
+async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) -> Result<(), Error> {
     log::info!("Transfer start: '{}'", path);
 
     // For streaming sender's response body
@@ -199,8 +199,7 @@ async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes
     // Notify sender when sending starts
     sender_res_body_sender
         .send_data(Bytes::from("[INFO] Start sending...\n"))
-        .await
-        .unwrap();
+        .await?;
 
     // The finish_waiter will tell when the body is finished
     let (finish_detectable_body, sender_req_body_finish_waiter) =
@@ -221,8 +220,8 @@ async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes
             "Access-Control-Expose-Headers",
             "Content-Length, Content-Type",
         )
-        .body(receiver_res_body)
-        .unwrap();
+        .body(receiver_res_body)?;
+
     // Return response to receiver
     receiver_req_res.res_sender.send(receiver_res).unwrap();
 
@@ -244,4 +243,30 @@ async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes
             .unwrap();
         log::info!("Transfer end: '{}'", path);
     });
+    Ok(())
 }
+
+
+enum Error {
+    HttpError(http::Error),
+    HyperError(hyper::Error),
+    // StdError(Box<&'a dyn std::error::Error>)
+}
+
+impl From<http::Error> for Error {
+    fn from(e: http::Error) -> Self {
+        Error::HttpError(e)
+    }
+}
+
+impl From<hyper::Error> for Error {
+    fn from(e: hyper::Error) -> Self {
+        Error::HyperError(e)
+    }
+}
+
+// impl From<&dyn std::error::Error> for Error {
+//     fn from(e: &dyn std::error::Error) -> Self {
+//         Error::StdError(Box::new(e))
+//     }
+// }
