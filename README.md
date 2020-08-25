@@ -36,12 +36,16 @@ docker run -p 8181:8080 --init nwtgck/piping-server-rust
 Piping Server in Rust
 
 USAGE:
-    piping-server [OPTIONS]
+    piping-server [FLAGS] [OPTIONS]
 
 FLAGS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
+        --enable-https
+    -h, --help            Prints help information
+    -V, --version         Prints version information
 
 OPTIONS:
-        --http-port <http-port>    HTTP port [default: 8080]
+        --crt-path <crt-path>
+        --http-port <http-port>      HTTP port [default: 8080]
+        --https-port <https-port>    HTTPS port
+        --key-path <key-path>
 ```
