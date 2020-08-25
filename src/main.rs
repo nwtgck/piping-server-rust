@@ -31,7 +31,6 @@ struct Opt {
     key_path: Option<String>,
 }
 
-// TODO: Use some logger instead of print!()s
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     // Parse options
@@ -41,6 +40,8 @@ async fn main() -> std::io::Result<()> {
     let tls_acceptor: TlsAcceptor;
 
     let piping_server = &PipingServer::new();
+
+    env_logger::init();
 
     let https_server = if opt.enable_https {
         if let (Some(https_port), Some(crt_path), Some(key_path)) =
@@ -62,14 +63,14 @@ async fn main() -> std::io::Result<()> {
                     let client = match s {
                         Ok(x) => x,
                         Err(e) => {
-                            eprintln!("Failed to accept client: {}", e);
+                            log::error!("Failed to accept client: {}", e);
                             return None;
                         }
                     };
                     match tls_acceptor.accept(client).await {
                         Ok(x) => Some(Ok::<_, std::io::Error>(x)),
                         Err(e) => {
-                            eprintln!("Client connection error: {}", e);
+                            log::error!("Client connection error: {}", e);
                             None
                         }
                     }
@@ -108,9 +109,9 @@ async fn main() -> std::io::Result<()> {
     });
     let http_server = Server::bind(&([0, 0, 0, 0], opt.http_port).into()).serve(http_svc);
 
-    println!("HTTP server is running on {}...", opt.http_port);
+    log::info!("HTTP server is running on {}...", opt.http_port);
     if let Some(https_port) = opt.https_port {
-        println!("HTTPS server is running on {:?}...", https_port);
+        log::info!("HTTPS server is running on {:?}...", https_port);
     }
     match futures::future::join(http_server, https_server).await {
         (Err(e), _) => return Err(util::make_io_error(format!("HTTP server error: {}", e))),

@@ -41,7 +41,7 @@ impl PipingServer {
         async move {
             let path = req.uri().path();
 
-            println!("{} {}", req.method(), req.uri().path());
+            log::info!("{} {}", req.method(), req.uri().path());
             match req.method() {
                 &Method::GET => {
                     match path {
@@ -167,7 +167,7 @@ impl PipingServer {
                     res_sender.send(res).unwrap();
                 }
                 _ => {
-                    println!("Unsupported method: {}", req.method());
+                    log::info!("Unsupported method: {}", req.method());
                     let res = Response::builder()
                         .status(400)
                         .header("Access-Control-Allow-Origin", "*")
@@ -184,7 +184,7 @@ impl PipingServer {
 }
 
 async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
-    println!("Transfer start: '{}'", path);
+    log::info!("Transfer start: '{}'", path);
 
     // For streaming sender's response body
     let (mut sender_res_body_sender, sender_res_body) = Body::channel();
@@ -242,6 +242,6 @@ async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes
             .send_data(Bytes::from("[INFO] Sent successfully!\n"))
             .await
             .unwrap();
-        println!("Transfer end: '{}'", path);
+        log::info!("Transfer end: '{}'", path);
     });
 }
