@@ -60,7 +60,7 @@ impl PipingServer {
                                 .status(200)
                                 .header("Content-Type", "text/plain")
                                 .header("Access-Control-Allow-Origin", "*")
-                                .body(Body::from(format!("{} in Rust (Hyper)", version)))
+                                .body(Body::from(format!("{} in Rust (Hyper)\n", version)))
                                 .unwrap();
                             res_sender.send(res).unwrap();
                         }
