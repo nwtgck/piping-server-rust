@@ -44,7 +44,8 @@ async fn main() -> std::io::Result<()> {
 
     let piping_server = &PipingServer::new();
 
-    env_logger::init();
+    // Set default log level
+    env_logger::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let https_server = if opt.enable_https {
         if let (Some(https_port), Some(crt_path), Some(key_path)) =
