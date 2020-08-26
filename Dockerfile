@@ -25,8 +25,6 @@ RUN cargo build --release
 FROM ubuntu:18.04
 LABEL maintainer="Ryo Ota <nwtgck@nwtgck.org>"
 
-ENV RUST_LOG info
-
 COPY --from=build /app/target/release/piping-server /app/target/release/piping-server
 
 # Run a server
