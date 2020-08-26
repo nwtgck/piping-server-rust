@@ -21,12 +21,15 @@ struct Opt {
     #[structopt(long, default_value = "8080")]
     http_port: u16,
     #[structopt(long)]
+    /// Enable HTTPS
     enable_https: bool,
     /// HTTPS port
     #[structopt(long)]
     https_port: Option<u16>,
+    /// Certification path
     #[structopt(long)]
     crt_path: Option<String>,
+    /// Private key path
     #[structopt(long)]
     key_path: Option<String>,
 }
@@ -41,7 +44,8 @@ async fn main() -> std::io::Result<()> {
 
     let piping_server = &PipingServer::new();
 
-    env_logger::init();
+    // Set default log level
+    env_logger::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let https_server = if opt.enable_https {
         if let (Some(https_port), Some(crt_path), Some(key_path)) =
