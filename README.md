@@ -27,7 +27,7 @@ cargo run --release
 Run a Piping Server on <http://localhost:8181> by the following command.
 
 ```rs
-docker run -p 8181:8080 --init nwtgck/piping-server-rust
+docker run -p 8181:8080 nwtgck/piping-server-rust
 ```
 
 ### Server-side help
