@@ -1,24 +1,17 @@
 # NOTE: Multi-stage Build
 
-FROM rust:1.45.2 as build
+FROM ekidd/rust-musl-builder:1.45.2 as build
 
-# (from: https://blog.rust-lang.org/2016/05/13/rustup.html)
-RUN rustup target add x86_64-unknown-linux-musl
-COPY . /app
-# Move to /app
-WORKDIR /app
+# Copy to current directory and change the owner
+COPY --chown=rust:rust . ./
 # Build
 RUN cargo build --release
 
 
-FROM ubuntu:18.04
+FROM scratch
 LABEL maintainer="Ryo Ota <nwtgck@nwtgck.org>"
 
-ENV TINI_VERSION "v0.19.0"
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/local/bin/tini
-RUN chmod +x /usr/local/bin/tini
-
-COPY --from=build /app/target/release/piping-server /app/target/release/piping-server
-
+# Copy executable
+COPY --from=build /home/rust/src/target/x86_64-unknown-linux-musl/release/piping-server /piping-server
 # Run a server
-ENTRYPOINT [ "/usr/local/bin/tini", "--", "/app/target/release/piping-server" ]
+ENTRYPOINT [ "/piping-server" ]
