@@ -2,13 +2,13 @@
 
 FROM rust:1.45.2 as build
 
-# (from: https://blog.rust-lang.org/2016/05/13/rustup.html)
+# (from: https://doc.rust-lang.org/edition-guide/rust-2018/platform-and-target-support/musl-support-for-fully-static-binaries.html)
 RUN rustup target add x86_64-unknown-linux-musl
 COPY . /app
 # Move to /app
 WORKDIR /app
 # Build
-RUN cargo build --release
+RUN cargo build --release --target x86_64-unknown-linux-musl
 
 
 FROM ubuntu:18.04
