@@ -16,18 +16,24 @@
 Safe, Fast and No garbage collection (GC)
 
 ## Run a server
-You can choose Cargo or Docker to run a server.
+You can choose some ways to run a server.
 
-### Cargo
-```rs
-cargo run --release
-```
+### Way 1: Binary
 
-### Docker
+Executable files are available on [GitHub Release](https://github.com/nwtgck/piping-server-rust/releases) for Linux and macOS. You can download it and run it.
+
+The executable file for Linux is portable because it is statically linked.
+
+### Way 2: Docker
 Run a Piping Server on <http://localhost:8181> by the following command.
 
 ```rs
 docker run -p 8181:8080 nwtgck/piping-server-rust
+```
+
+### Way 3: Cargo
+```rs
+cargo run --release
 ```
 
 ### Server-side help
