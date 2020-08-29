@@ -10,6 +10,6 @@ COPY . /app
 RUN cd /app && cargo build --release
 
 
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 # Copy binary
 COPY --from=build /app/target/release/piping-server /app/target/release/piping-server
