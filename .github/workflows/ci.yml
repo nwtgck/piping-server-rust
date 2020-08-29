@@ -3,24 +3,22 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  build_and_operational_test:
+  build_for_linux_and_operational_test:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    - name: Version information
+    - name: Build
       run: |
-        rustc --version
-        cargo --version
-        rustup --version
-    - name: Build all targets
-      run: cargo build --all --all-targets
+        set -eux
+        docker run --rm -v "$(pwd)":/home/rust/src ekidd/rust-musl-builder:1.46.0 sh -c 'sudo chown -R rust:rust . && cargo build --release'
+        sudo chown -R $USER:$USER .
     - name: Operational test
       run: |
         set -x
         # Create certificates
         mkdir ssl_certs && cd ssl_certs && openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -sha256 -nodes --subj '/CN=localhost/' && cd -
         # Run a server
-        cargo run -- --http-port=8181 --enable-https --https-port=8443 --crt-path=./ssl_certs/server.crt --key-path=./ssl_certs/server.key &
+        ./target/x86_64-unknown-linux-musl/release/piping-server --http-port=8181 --enable-https --https-port=8443 --crt-path=./ssl_certs/server.crt --key-path=./ssl_certs/server.key &
         sleep 3
 
         # Transfer data over HTTP
@@ -42,7 +40,37 @@ jobs:
         cat 500M.dat | curl -kT - https://localhost:8443/mypath2 &
         diff <(cat 500M.dat) <(curl -k https://localhost:8443/mypath2)
         rm 500M.dat
-  
+    - name: Archive
+      run: |
+        set -eux
+        mkdir piping-server-x86-64-linux
+        cp target/x86_64-unknown-linux-musl/release/piping-server piping-server-x86-64-linux
+        zip -r piping-server-x86-64-linux.zip piping-server-x86-64-linux
+        tar czf piping-server-x86-64-linux.tar.gz piping-server-x86-64-linux
+    - name: Upload Linux executables as artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ github.sha }}-linux-artifacts
+        path: piping-server-x86-64-linux.*
+
+  build_for_mac:
+    runs-on: macOS-10.15
+    steps:
+    - uses: actions/checkout@v2
+    - run: cargo build --release
+    - name: Archive
+      run: |
+        set -eux
+        mkdir piping-server-x86-64-apple-darwin
+        cp target/release/piping-server piping-server-x86-64-apple-darwin
+        zip -r piping-server-x86-64-apple-darwin.zip piping-server-x86-64-apple-darwin
+        tar czf piping-server-x86-64-apple-darwin.tar.gz piping-server-x86-64-apple-darwin
+    - name: Upload macOS executables as artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ github.sha }}-mac-artifacts
+        path: piping-server-x86-64-apple-darwin.*
+
   docker:
     runs-on: ubuntu-18.04
     steps:
@@ -83,51 +111,35 @@ jobs:
         # Delete container
         docker rm -f piping
 
-  build_and_release_if_tag_exits:
+  release_if_tag_exits:
+    needs: [build_for_linux_and_operational_test, build_for_mac]
     runs-on: ubuntu-18.04
     steps:
     - name: Extract tag name
       shell: bash
       run: echo "##[set-output name=tag;]$(echo ${GITHUB_REF#refs/tags/})"
       id: extract_tag
-    - run: echo "tag name ${{ steps.extract_tag.outputs.tag }}"
+    # NOTE: checkout is needed to use hub command
     - uses: actions/checkout@v2
-    - name: Build
-      run: docker run --rm -v "$(pwd)":/home/rust/src ekidd/rust-musl-builder:1.46.0 sh -c 'sudo chown -R rust:rust . && cargo build --release'
-    - name: Archive
+    - name: Download the artifact (Linux)
+      uses: actions/download-artifact@v2
+      with:
+        name: ${{ github.sha }}-linux-artifacts
+    - name: Download the artifact (macOS)
+      uses: actions/download-artifact@v2
+      with:
+        name: ${{ github.sha }}-mac-artifacts
+    - run: ls -la
+    # (base: https://github.com/actions/upload-release-asset/issues/28#issuecomment-617208601)
+    - name: Release
+      if: contains(github.ref, 'refs/tags/')
       run: |
         set -eux
-        sudo chown -R $USER:$USER .
-        mkdir piping-server-x86-64-linux
-        cp target/x86_64-unknown-linux-musl/release/piping-server piping-server-x86-64-linux
-        zip -r piping-server-x86-64-linux.zip piping-server-x86-64-linux
-        tar czf piping-server-x86-64-linux.tar.gz piping-server-x86-64-linux
-    - name: Create Release
-      if: contains(github.ref, 'refs/tags/')
-      id: create_release
-      uses: actions/create-release@v1
+        hub release create \
+          -a piping-server-x86-64-linux.tar.gz \
+          -a piping-server-x86-64-linux.zip \
+          -a piping-server-x86-64-apple-darwin.tar.gz \
+          -a piping-server-x86-64-apple-darwin.zip \
+          -m "Release ${{ steps.extract_tag.outputs.tag }}" ${{ steps.extract_tag.outputs.tag }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.extract_tag.outputs.tag }}
-        release_name: Release ${{ steps.extract_tag.outputs.tag }}
-        draft: false
-        prerelease: false
-    - uses: actions/upload-release-asset@v1
-      if: contains(github.ref, 'refs/tags/')
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./piping-server-x86-64-linux.zip
-        asset_name: piping-server-x86-64-linux.zip
-        asset_content_type: application/zip
-    - uses: actions/upload-release-asset@v1
-      if: contains(github.ref, 'refs/tags/')
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./piping-server-x86-64-linux.tar.gz
-        asset_name: piping-server-x86-64-linux.tar.gz
-        asset_content_type: application/tar+gzip
