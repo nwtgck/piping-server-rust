@@ -65,6 +65,20 @@ impl PipingServer {
                             res_sender.send(res).unwrap();
                         }
                         _ => {
+                            if let Some(value) = req.headers().get("service-worker") {
+                                if value == http::HeaderValue::from_static("script") {
+                                    // Reject Service Worker registration
+                                    let res = Response::builder()
+                                        .status(400)
+                                        .header("Access-Control-Allow-Origin", "*")
+                                        .body(Body::from(
+                                            "[ERROR] Service Worker registration is rejected.\n"
+                                        ))
+                                        .unwrap();
+                                    res_sender.send(res).unwrap();
+                                    return
+                                }
+                            }
                             let receiver_connected: bool = {
                                 let path_to_receiver_guard = path_to_receiver.lock().unwrap();
                                 path_to_receiver_guard.contains_key(path)
