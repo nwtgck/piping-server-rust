@@ -1,5 +1,5 @@
 # piping-server
-[![CircleCI](https://circleci.com/gh/nwtgck/piping-server-rust.svg?style=shield)](https://circleci.com/gh/nwtgck/piping-server-rust)　[![](https://images.microbadger.com/badges/image/nwtgck/piping-server-rust.svg)](https://microbadger.com/images/nwtgck/piping-server-rust "Get your own image badge on microbadger.com")
+[![CI](https://github.com/nwtgck/piping-server-rust/workflows/CI/badge.svg)](https://github.com/nwtgck/piping-server-rust/actions) [![CircleCI](https://circleci.com/gh/nwtgck/piping-server-rust.svg?style=shield)](https://circleci.com/gh/nwtgck/piping-server-rust) [![](https://images.microbadger.com/badges/image/nwtgck/piping-server-rust.svg)](https://microbadger.com/images/nwtgck/piping-server-rust "Get your own image badge on microbadger.com")
 
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
