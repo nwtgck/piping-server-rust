@@ -83,3 +83,52 @@ jobs:
         docker logs piping
         # Delete container
         docker rm -f piping
+
+  build_and_release_if_tag_exits:
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Extract tag name
+      shell: bash
+      run: echo "##[set-output name=tag;]$(echo ${GITHUB_REF#refs/tags/})"
+      id: extract_tag
+    - run: echo "tag name ${{ steps.extract_tag.outputs.tag }}"
+    - uses: actions/checkout@v2
+    - name: Build
+      run: docker run --rm -v "$(pwd)":/home/rust/src ekidd/rust-musl-builder:1.46.0 sh -c 'sudo chown -R rust:rust . && cargo build --release'
+    - name: Archive
+      run: |
+        set -eux
+        sudo chown -R $USER:$USER .
+        mkdir piping-server-x86-64-linux
+        cp target/x86_64-unknown-linux-musl/release/piping-server piping-server-x86-64-linux
+        zip -r piping-server-x86-64-linux.zip piping-server-x86-64-linux
+        tar czf piping-server-x86-64-linux.tar.gz piping-server-x86-64-linux
+    - name: Create Release
+      if: contains(github.ref, 'refs/tags/')
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.extract_tag.outputs.tag }}
+        release_name: Release ${{ steps.extract_tag.outputs.tag }}
+        draft: false
+        prerelease: false
+    - uses: actions/upload-release-asset@v1
+      if: contains(github.ref, 'refs/tags/')
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./piping-server-x86-64-linux.zip
+        asset_name: piping-server-x86-64-linux.zip
+        asset_content_type: application/zip
+    - uses: actions/upload-release-asset@v1
+      if: contains(github.ref, 'refs/tags/')
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./piping-server-x86-64-linux.tar.gz
+        asset_name: piping-server-x86-64-linux.tar.gz
+        asset_content_type: application/tar+gzip
