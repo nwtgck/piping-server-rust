@@ -6,6 +6,7 @@ use structopt::StructOpt;
 use tokio::net::TcpListener;
 use tokio_rustls::TlsAcceptor;
 
+mod macros;
 mod piping_server;
 mod req_res_handler;
 mod util;
