@@ -72,11 +72,11 @@ impl PipingServer {
                                         .status(400)
                                         .header("Access-Control-Allow-Origin", "*")
                                         .body(Body::from(
-                                            "[ERROR] Service Worker registration is rejected.\n"
+                                            "[ERROR] Service Worker registration is rejected.\n",
                                         ))
                                         .unwrap();
                                     res_sender.send(res).unwrap();
-                                    return
+                                    return;
                                 }
                             }
                             let receiver_connected: bool = {
