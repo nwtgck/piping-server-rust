@@ -5,11 +5,9 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use crate::util::{finish_detectable_stream, FinishDetectableStream, OptionHeaderBuilder};
-use crate::{count, with_values};
 
-struct ReservedPath;
-with_values! {
-    impl ReservedPath {
+mod reserved_paths {
+    crate::with_values! {
         pub const INDEX: &'static str = "/";
         pub const VERSION: &'static str = "/version";
         pub const FAVICON_ICO: &'static str = "/favicon.ico";
@@ -56,7 +54,7 @@ impl PipingServer {
             match req.method() {
                 &Method::GET => {
                     match path {
-                        ReservedPath::INDEX => {
+                        reserved_paths::INDEX => {
                             let res = Response::builder()
                                 .status(200)
                                 .header("Content-Type", "text/html")
@@ -65,7 +63,7 @@ impl PipingServer {
                                 .unwrap();
                             res_sender.send(res).unwrap();
                         }
-                        ReservedPath::VERSION => {
+                        reserved_paths::VERSION => {
                             let version: &'static str = env!("CARGO_PKG_VERSION");
                             let res = Response::builder()
                                 .status(200)
@@ -75,11 +73,11 @@ impl PipingServer {
                                 .unwrap();
                             res_sender.send(res).unwrap();
                         }
-                        ReservedPath::FAVICON_ICO => {
+                        reserved_paths::FAVICON_ICO => {
                             let res = Response::builder().status(204).body(Body::empty()).unwrap();
                             res_sender.send(res).unwrap();
                         }
-                        ReservedPath::ROBOTS_TXT => {
+                        reserved_paths::ROBOTS_TXT => {
                             let res = Response::builder().status(404).body(Body::empty()).unwrap();
                             res_sender.send(res).unwrap();
                         }
@@ -136,7 +134,7 @@ impl PipingServer {
                     }
                 }
                 &Method::POST | &Method::PUT => {
-                    if ReservedPath::VALUES.contains(&path) {
+                    if reserved_paths::VALUES.contains(&path) {
                         // Reject reserved path sending
                         let res = Response::builder()
                             .status(400)

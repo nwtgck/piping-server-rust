@@ -2,17 +2,22 @@
 #[macro_export]
 macro_rules! count {
     () => (0usize);
-    ( $x:tt $($xs:tt)* ) => (1usize + count!($($xs)*));
+    ( $x:tt $($xs:tt)* ) => (1usize + $crate::count!($($xs)*));
+}
+
+#[macro_export]
+macro_rules! head {
+    ($x:tt $($y:tt)*) => {
+        $x
+    };
 }
 
 #[macro_export]
 macro_rules! with_values {
-    (impl $name:ident {
+    (
         $(pub const $field_name:ident: $field_type:ty = $value:expr;)*
-    }) => {
-        impl $name {
-            $(pub const $field_name: $field_type = $value;)*
-            pub const VALUES: [&'static str; count!($($value)*)] = [$($value),*];
-        }
+    ) => {
+        $(pub const $field_name: $field_type = $value;)*
+        pub const VALUES: [$crate::head!($($field_type)*); $crate::count!($($value)*)] = [$($value),*];
     }
 }
