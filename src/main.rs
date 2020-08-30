@@ -82,12 +82,9 @@ async fn main() -> std::io::Result<()> {
                 });
             let https_svc = make_service_fn(move |_| {
                 let piping_server = piping_server.clone();
-                async move {
-                    let handler = req_res_handler(move |req, res_sender| {
-                        piping_server.clone().handler(req, res_sender)
-                    });
-                    Ok::<_, Infallible>(service_fn(handler))
-                }
+                let handler =
+                    req_res_handler(move |req, res_sender| piping_server.handler(req, res_sender));
+                futures::future::ok::<_, Infallible>(service_fn(handler))
             });
             let https_server = Server::builder(util::HyperAcceptor {
                 acceptor: Box::pin(incoming_tls_stream),
@@ -103,14 +100,11 @@ async fn main() -> std::io::Result<()> {
         futures::future::Either::Right(futures::future::ok(()))
     };
 
-    let http_svc = make_service_fn(move |_| {
+    let http_svc = make_service_fn(|_| {
         let piping_server = piping_server.clone();
-        async move {
-            let handler = req_res_handler(move |req, res_sender| {
-                piping_server.clone().handler(req, res_sender)
-            });
-            Ok::<_, Infallible>(service_fn(handler))
-        }
+        let handler =
+            req_res_handler(move |req, res_sender| piping_server.handler(req, res_sender));
+        futures::future::ok::<_, Infallible>(service_fn(handler))
     });
     let http_server = Server::bind(&([0, 0, 0, 0], opt.http_port).into()).serve(http_svc);
 
