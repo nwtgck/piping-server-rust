@@ -28,11 +28,15 @@ The executable file for Linux is portable because it is statically linked.
 Run a Piping Server on <http://localhost:8181> by the following command.
 
 ```rs
-docker run -p 8181:8080 nwtgck/piping-server-rust
+docker run -p 8181:8080 --init nwtgck/piping-server-rust
 ```
 
 ### Way 3: Cargo
-```rs
+You can clone, build and run this project as follows.
+
+```bash
+git clone https://github.com/nwtgck/piping-server-rust.git
+cd piping-server-rust
 cargo run --release
 ```
 
