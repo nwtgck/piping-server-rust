@@ -5,6 +5,17 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use crate::util::{finish_detectable_stream, FinishDetectableStream, OptionHeaderBuilder};
+use crate::{count, with_values};
+
+struct ReservedPath;
+with_values! {
+    impl ReservedPath {
+        pub const INDEX: &'static str = "/";
+        pub const VERSION: &'static str = "/version";
+        pub const FAVICON_ICO: &'static str = "/favicon.ico";
+        pub const ROBOTS_TXT: &'static str = "/robots.txt";
+    }
+}
 
 struct ReqRes {
     req: Request<Body>,
@@ -45,7 +56,7 @@ impl PipingServer {
             match req.method() {
                 &Method::GET => {
                     match path {
-                        "/" => {
+                        ReservedPath::INDEX => {
                             let res = Response::builder()
                                 .status(200)
                                 .header("Content-Type", "text/html")
@@ -54,7 +65,7 @@ impl PipingServer {
                                 .unwrap();
                             res_sender.send(res).unwrap();
                         }
-                        "/version" => {
+                        ReservedPath::VERSION => {
                             let version: &'static str = env!("CARGO_PKG_VERSION");
                             let res = Response::builder()
                                 .status(200)
@@ -62,6 +73,14 @@ impl PipingServer {
                                 .header("Access-Control-Allow-Origin", "*")
                                 .body(Body::from(format!("{} in Rust (Hyper)\n", version)))
                                 .unwrap();
+                            res_sender.send(res).unwrap();
+                        }
+                        ReservedPath::FAVICON_ICO => {
+                            let res = Response::builder().status(204).body(Body::empty()).unwrap();
+                            res_sender.send(res).unwrap();
+                        }
+                        ReservedPath::ROBOTS_TXT => {
+                            let res = Response::builder().status(404).body(Body::empty()).unwrap();
                             res_sender.send(res).unwrap();
                         }
                         _ => {
@@ -72,11 +91,11 @@ impl PipingServer {
                                         .status(400)
                                         .header("Access-Control-Allow-Origin", "*")
                                         .body(Body::from(
-                                            "[ERROR] Service Worker registration is rejected.\n"
+                                            "[ERROR] Service Worker registration is rejected.\n",
                                         ))
                                         .unwrap();
                                     res_sender.send(res).unwrap();
-                                    return
+                                    return;
                                 }
                             }
                             let receiver_connected: bool = {
@@ -122,6 +141,19 @@ impl PipingServer {
                     }
                 }
                 &Method::POST | &Method::PUT => {
+                    if ReservedPath::VALUES.contains(&path) {
+                        // Reject reserved path sending
+                        let res = Response::builder()
+                            .status(400)
+                            .header("Access-Control-Allow-Origin", "*")
+                            .body(Body::from(format!(
+                                "[ERROR] Cannot send to the reserved path '{}'. (e.g. '/mypath123')\n",
+                                path
+                            )))
+                            .unwrap();
+                        res_sender.send(res).unwrap();
+                        return;
+                    }
                     let sender_connected: bool = {
                         let path_to_sender_guard = path_to_sender.lock().unwrap();
                         path_to_sender_guard.contains_key(path)
