@@ -12,6 +12,8 @@ with_values! {
     impl ReservedPath {
         pub const INDEX: &'static str = "/";
         pub const VERSION: &'static str = "/version";
+        pub const FAVICON_ICO: &'static str = "/favicon.ico";
+        pub const ROBOTS_TXT: &'static str = "/robots.txt";
     }
 }
 
@@ -71,6 +73,14 @@ impl PipingServer {
                                 .header("Access-Control-Allow-Origin", "*")
                                 .body(Body::from(format!("{} in Rust (Hyper)\n", version)))
                                 .unwrap();
+                            res_sender.send(res).unwrap();
+                        }
+                        ReservedPath::FAVICON_ICO => {
+                            let res = Response::builder().status(204).body(Body::empty()).unwrap();
+                            res_sender.send(res).unwrap();
+                        }
+                        ReservedPath::ROBOTS_TXT => {
+                            let res = Response::builder().status(404).body(Body::empty()).unwrap();
                             res_sender.send(res).unwrap();
                         }
                         _ => {
