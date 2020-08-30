@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.7.0] - 2020-08-30
+### Changed
+* Reject reserved path sending
+* Return 204 at /favicon.ico
+* Return 404 at /robots.txt
+
 ## [0.6.2] - 2020-08-29
 ### Changed
 * Minimize Docker image (Docker)
@@ -105,7 +111,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.6.2...v0.7.0
 [0.6.2]: https://github.com/nwtgck/piping-server-rust/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.5.3...v0.6.0
