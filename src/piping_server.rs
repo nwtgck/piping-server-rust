@@ -2,14 +2,12 @@ use futures::channel::oneshot;
 use hyper::body::Bytes;
 use hyper::{Body, Method, Request, Response};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 use crate::util::{finish_detectable_stream, FinishDetectableStream, OptionHeaderBuilder};
-use crate::{count, with_values};
 
-struct ReservedPath;
-with_values! {
-    impl ReservedPath {
+mod reserved_paths {
+    crate::with_values! {
         pub const INDEX: &'static str = "/";
         pub const VERSION: &'static str = "/version";
         pub const FAVICON_ICO: &'static str = "/favicon.ico";
@@ -23,15 +21,15 @@ struct ReqRes {
 }
 
 pub struct PipingServer {
-    path_to_sender: Arc<Mutex<HashMap<String, ReqRes>>>,
-    path_to_receiver: Arc<Mutex<HashMap<String, ReqRes>>>,
+    path_to_sender: Arc<RwLock<HashMap<String, ReqRes>>>,
+    path_to_receiver: Arc<RwLock<HashMap<String, ReqRes>>>,
 }
 
 impl PipingServer {
     pub fn new() -> Self {
         PipingServer {
-            path_to_sender: Arc::new(Mutex::new(HashMap::new())),
-            path_to_receiver: Arc::new(Mutex::new(HashMap::new())),
+            path_to_sender: Arc::new(RwLock::new(HashMap::new())),
+            path_to_receiver: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -56,7 +54,7 @@ impl PipingServer {
             match req.method() {
                 &Method::GET => {
                     match path {
-                        ReservedPath::INDEX => {
+                        reserved_paths::INDEX => {
                             let res = Response::builder()
                                 .status(200)
                                 .header("Content-Type", "text/html")
@@ -65,7 +63,7 @@ impl PipingServer {
                                 .unwrap();
                             res_sender.send(res).unwrap();
                         }
-                        ReservedPath::VERSION => {
+                        reserved_paths::VERSION => {
                             let version: &'static str = env!("CARGO_PKG_VERSION");
                             let res = Response::builder()
                                 .status(200)
@@ -75,11 +73,11 @@ impl PipingServer {
                                 .unwrap();
                             res_sender.send(res).unwrap();
                         }
-                        ReservedPath::FAVICON_ICO => {
+                        reserved_paths::FAVICON_ICO => {
                             let res = Response::builder().status(204).body(Body::empty()).unwrap();
                             res_sender.send(res).unwrap();
                         }
-                        ReservedPath::ROBOTS_TXT => {
+                        reserved_paths::ROBOTS_TXT => {
                             let res = Response::builder().status(404).body(Body::empty()).unwrap();
                             res_sender.send(res).unwrap();
                         }
@@ -98,10 +96,8 @@ impl PipingServer {
                                     return;
                                 }
                             }
-                            let receiver_connected: bool = {
-                                let path_to_receiver_guard = path_to_receiver.lock().unwrap();
-                                path_to_receiver_guard.contains_key(path)
-                            };
+                            let receiver_connected: bool =
+                                path_to_receiver.read().unwrap().contains_key(path);
                             // If a receiver has been connected already
                             if receiver_connected {
                                 let res = Response::builder()
@@ -115,10 +111,7 @@ impl PipingServer {
                                 res_sender.send(res).unwrap();
                                 return;
                             }
-                            let sender = {
-                                let mut path_to_sender_guard = path_to_sender.lock().unwrap();
-                                path_to_sender_guard.remove(path)
-                            };
+                            let sender = path_to_sender.write().unwrap().remove(path);
                             match sender {
                                 // If sender is found
                                 Some(sender_req_res) => {
@@ -131,9 +124,9 @@ impl PipingServer {
                                 }
                                 // If sender is not found
                                 None => {
-                                    let mut path_to_receiver_guard =
-                                        path_to_receiver.lock().unwrap();
-                                    path_to_receiver_guard
+                                    path_to_receiver
+                                        .write()
+                                        .unwrap()
                                         .insert(path.to_string(), ReqRes { req, res_sender });
                                 }
                             }
@@ -141,7 +134,7 @@ impl PipingServer {
                     }
                 }
                 &Method::POST | &Method::PUT => {
-                    if ReservedPath::VALUES.contains(&path) {
+                    if reserved_paths::VALUES.contains(&path) {
                         // Reject reserved path sending
                         let res = Response::builder()
                             .status(400)
@@ -154,10 +147,7 @@ impl PipingServer {
                         res_sender.send(res).unwrap();
                         return;
                     }
-                    let sender_connected: bool = {
-                        let path_to_sender_guard = path_to_sender.lock().unwrap();
-                        path_to_sender_guard.contains_key(path)
-                    };
+                    let sender_connected: bool = path_to_sender.read().unwrap().contains_key(path);
                     // If a sender has been connected already
                     if sender_connected {
                         let res = Response::builder()
@@ -171,10 +161,7 @@ impl PipingServer {
                         res_sender.send(res).unwrap();
                         return;
                     }
-                    let receiver = {
-                        let mut path_to_receiver_guard = path_to_receiver.lock().unwrap();
-                        path_to_receiver_guard.remove(path)
-                    };
+                    let receiver = path_to_receiver.write().unwrap().remove(path);
                     match receiver {
                         // If receiver is found
                         Some(receiver_req_res) => {
@@ -187,8 +174,9 @@ impl PipingServer {
                         }
                         // If receiver is not found
                         None => {
-                            let mut path_to_sender_guard = path_to_sender.lock().unwrap();
-                            path_to_sender_guard
+                            path_to_sender
+                                .write()
+                                .unwrap()
                                 .insert(path.to_string(), ReqRes { req, res_sender });
                         }
                     }
