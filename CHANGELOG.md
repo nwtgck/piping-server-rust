@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.7.1] - 2020-09-01
+### Changed
+* Improve implementation (internal)
+* Update dependencies
+
 ## [0.7.0] - 2020-08-30
 ### Changed
 * Reject reserved path sending
@@ -111,7 +116,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.6.2...v0.7.0
 [0.6.2]: https://github.com/nwtgck/piping-server-rust/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.6.0...v0.6.1
