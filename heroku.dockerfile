@@ -1,15 +1,15 @@
 # NOTE: Multi-stage Build
-FROM rust:1.46.0 as build
-LABEL maintainer="Ryo Ota <nwtgck@nwtgck.org>"
-# (from: https://blog.rust-lang.org/2016/05/13/rustup.html)
-RUN rustup target add x86_64-unknown-linux-musl
 
-# Copy project
-COPY . /app
+FROM ekidd/rust-musl-builder:1.45.2 as build
+
+# Copy to current directory and change the owner
+COPY --chown=rust:rust . ./
 # Build
-RUN cd /app && cargo build --release
+RUN cargo build --release
 
 
-FROM ubuntu:18.04
-# Copy binary
-COPY --from=build /app/target/release/piping-server /app/target/release/piping-server
+FROM alpine:3.12.0
+LABEL maintainer="Ryo Ota <nwtgck@nwtgck.org>"
+
+# Copy executable
+COPY --from=build /home/rust/src/target/x86_64-unknown-linux-musl/release/piping-server /usr/local/bin/piping-server
