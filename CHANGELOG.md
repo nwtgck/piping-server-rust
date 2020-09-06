@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.8.0] - 2020-09-06
+### Added
+* Send messages to sender before transferring
+
 ## [0.7.2] - 2020-09-01
 ### Changed
 * Simplify links in Web UI
@@ -120,7 +124,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/nwtgck/piping-server-rust/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.6.2...v0.7.0
