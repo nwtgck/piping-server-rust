@@ -15,14 +15,18 @@ mod reserved_paths {
     }
 }
 
-struct ReqRes {
+struct DataSender {
     req: Request<Body>,
+    res_body_sender: hyper::body::Sender,
+}
+
+struct DataReceiver {
     res_sender: oneshot::Sender<Response<Body>>,
 }
 
 pub struct PipingServer {
-    path_to_sender: Arc<RwLock<HashMap<String, ReqRes>>>,
-    path_to_receiver: Arc<RwLock<HashMap<String, ReqRes>>>,
+    path_to_sender: Arc<RwLock<HashMap<String, DataSender>>>,
+    path_to_receiver: Arc<RwLock<HashMap<String, DataReceiver>>>,
 }
 
 impl PipingServer {
@@ -114,11 +118,19 @@ impl PipingServer {
                             let sender = path_to_sender.write().unwrap().remove(path);
                             match sender {
                                 // If sender is found
-                                Some(sender_req_res) => {
+                                Some(mut data_sender) => {
+                                    data_sender
+                                        .res_body_sender
+                                        .send_data(Bytes::from(
+                                            "[INFO] A receiver was connected.\n",
+                                        ))
+                                        .await
+                                        .unwrap();
+                                    // }
                                     transfer(
                                         path.to_string(),
-                                        sender_req_res,
-                                        ReqRes { req, res_sender },
+                                        data_sender,
+                                        DataReceiver { res_sender },
                                     )
                                     .await;
                                 }
@@ -127,7 +139,7 @@ impl PipingServer {
                                     path_to_receiver
                                         .write()
                                         .unwrap()
-                                        .insert(path.to_string(), ReqRes { req, res_sender });
+                                        .insert(path.to_string(), DataReceiver { res_sender });
                                 }
                             }
                         }
@@ -161,23 +173,48 @@ impl PipingServer {
                         res_sender.send(res).unwrap();
                         return;
                     }
+
+                    // Return response to the sender (NOTE: message body will be chunked transferred.)
+                    let (mut res_body_sender, body) = hyper::Body::channel();
+                    let sender_res = Response::builder()
+                        .header("Access-Control-Allow-Origin", "*")
+                        .body(body)
+                        .unwrap();
+                    res_sender.send(sender_res).unwrap();
+
                     let receiver = path_to_receiver.write().unwrap().remove(path);
                     match receiver {
                         // If receiver is found
-                        Some(receiver_req_res) => {
+                        Some(data_receiver) => {
+                            res_body_sender
+                                .send_data(Bytes::from(
+                                    "[INFO] 1 receiver(s) has/have been connected.\n",
+                                ))
+                                .await
+                                .unwrap();
                             transfer(
                                 path.to_string(),
-                                ReqRes { req, res_sender },
-                                receiver_req_res,
+                                DataSender {
+                                    req,
+                                    res_body_sender,
+                                },
+                                data_receiver,
                             )
                             .await;
                         }
                         // If receiver is not found
                         None => {
-                            path_to_sender
-                                .write()
-                                .unwrap()
-                                .insert(path.to_string(), ReqRes { req, res_sender });
+                            res_body_sender
+                                .send_data(Bytes::from("[INFO] Waiting for 1 receiver(s)...\n"))
+                                .await
+                                .unwrap();
+                            path_to_sender.write().unwrap().insert(
+                                path.to_string(),
+                                DataSender {
+                                    req,
+                                    res_body_sender,
+                                },
+                            );
                         }
                     }
                 }
@@ -217,28 +254,23 @@ impl PipingServer {
     }
 }
 
-async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes) {
+async fn transfer(path: String, data_sender: DataSender, data_receiver: DataReceiver) {
     log::info!("Transfer start: '{}'", path);
 
-    // For streaming sender's response body
-    let (mut sender_res_body_sender, sender_res_body) = Body::channel();
+    // DataSender {req: req1, res_body_sender: s1} = data_sender;
+    let data_sender_req = data_sender.req;
+    let mut data_sender_res_body_sender = data_sender.res_body_sender;
 
     // Get sender's header
-    let sender_header = sender_req_res.req.headers();
+    let sender_header = data_sender_req.headers();
     // Get sender's header values
     let sender_content_type = sender_header.get("content-type").cloned();
     let sender_content_length = sender_header.get("content-length").cloned();
     let sender_content_disposition = sender_header.get("content-disposition").cloned();
 
-    // Notify sender when sending starts
-    sender_res_body_sender
-        .send_data(Bytes::from("[INFO] Start sending...\n"))
-        .await
-        .unwrap();
-
     // The finish_waiter will tell when the body is finished
     let (finish_detectable_body, sender_req_body_finish_waiter) =
-        finish_detectable_stream(sender_req_res.req.into_body());
+        finish_detectable_stream(data_sender_req.into_body());
 
     // Create receiver's body
     let receiver_res_body = Body::wrap_stream::<FinishDetectableStream<Body>, Bytes, hyper::Error>(
@@ -258,21 +290,18 @@ async fn transfer(path: String, sender_req_res: ReqRes, receiver_req_res: ReqRes
         .body(receiver_res_body)
         .unwrap();
     // Return response to receiver
-    receiver_req_res.res_sender.send(receiver_res).unwrap();
-
-    // Create sender's response
-    let sender_res = Response::builder()
-        .header("Access-Control-Allow-Origin", "*")
-        .body(sender_res_body)
-        .unwrap();
-    // Return response to sender
-    sender_req_res.res_sender.send(sender_res).unwrap();
+    data_receiver.res_sender.send(receiver_res).unwrap();
 
     tokio::task::spawn(async move {
+        // Notify sender when sending starts
+        data_sender_res_body_sender
+            .send_data(Bytes::from("[INFO] Start sending to 1 receiver(s)...\n"))
+            .await
+            .unwrap();
         // Wait for sender's request body finished
         sender_req_body_finish_waiter.await.unwrap();
         // Notify sender when sending finished
-        sender_res_body_sender
+        data_sender_res_body_sender
             .send_data(Bytes::from("[INFO] Sent successfully!\n"))
             .await
             .unwrap();
