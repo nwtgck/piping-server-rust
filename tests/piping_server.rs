@@ -138,3 +138,111 @@ async fn f() -> Result<(), BoxError> {
     serve.shutdown().await?;
     Ok(())
 }
+
+#[it("should handle /favicon.ico")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let uri = format!("http://{}/favicon.ico", serve.addr).parse::<http::Uri>()?;
+
+    let get_req = hyper::Request::builder()
+        .method(hyper::Method::GET)
+        .uri(uri.clone())
+        .body(hyper::Body::empty())?;
+    let client = Client::new();
+    let res = client.request(get_req).await?;
+
+    let (parts, body) = res.into_parts();
+
+    // Should be no body
+    let body_len: usize = read_all_body(body).await.len();
+    assert_eq!(body_len, 0);
+
+    let status: http::StatusCode = parts.status;
+    assert_eq!(status, http::StatusCode::NO_CONTENT);
+
+    serve.shutdown().await?;
+    Ok(())
+}
+
+#[it("should handle /robots.txt")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let uri = format!("http://{}/robots.txt", serve.addr).parse::<http::Uri>()?;
+
+    let get_req = hyper::Request::builder()
+        .method(hyper::Method::GET)
+        .uri(uri.clone())
+        .body(hyper::Body::empty())?;
+    let client = Client::new();
+    let res = client.request(get_req).await?;
+
+    let (parts, body) = res.into_parts();
+
+    // Should be no body
+    let body_len: usize = read_all_body(body).await.len();
+    assert_eq!(body_len, 0);
+
+    let status: http::StatusCode = parts.status;
+    assert_eq!(status, http::StatusCode::NOT_FOUND);
+
+    serve.shutdown().await?;
+    Ok(())
+}
+
+#[it("should support preflight request")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
+
+    let get_req = hyper::Request::builder()
+        .method(hyper::Method::OPTIONS)
+        .uri(uri.clone())
+        .body(hyper::Body::empty())?;
+    let client = Client::new();
+    let res = client.request(get_req).await?;
+
+    let (parts, _body) = res.into_parts();
+
+    let status: http::StatusCode = parts.status;
+    assert_eq!(status, http::StatusCode::OK);
+
+    assert_eq!(
+        parts
+            .headers
+            .get("access-control-allow-origin")
+            .unwrap()
+            .to_str()?,
+        "*"
+    );
+    assert_eq!(
+        parts
+            .headers
+            .get("access-control-allow-methods")
+            .unwrap()
+            .to_str()?,
+        "GET, HEAD, POST, PUT, OPTIONS"
+    );
+    assert_eq!(
+        parts
+            .headers
+            .get("access-control-allow-headers")
+            .unwrap()
+            .to_str()?
+            .to_lowercase(),
+        "content-type, content-disposition".to_owned()
+    );
+    assert_eq!(
+        parts
+            .headers
+            .get("access-control-max-age")
+            .unwrap()
+            .to_str()?,
+        "86400"
+    );
+
+    serve.shutdown().await?;
+    Ok(())
+}
