@@ -29,6 +29,7 @@ async fn read_all_body(mut body: hyper::body::Body) -> Vec<u8> {
 struct Serve {
     addr: SocketAddr,
     shutdown_tx: oneshot::Sender<()>,
+    shutdown_finished_rx: oneshot::Receiver<()>,
 }
 
 // Serve Piping Server on available port
@@ -37,6 +38,7 @@ async fn serve() -> Serve {
 
     let (addr_tx, addr_rx) = oneshot::channel::<SocketAddr>();
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
+    let (shutdown_finished_tx, shutdown_finished_rx) = oneshot::channel::<()>();
 
     tokio::spawn(async move {
         let http_svc = make_service_fn(|_| {
@@ -52,17 +54,30 @@ async fn serve() -> Serve {
 
         http_server
             .with_graceful_shutdown(async {
-                println!("waiting shutdown....");
                 let _ = shutdown_rx.await;
-                println!("shutdown detected");
             })
             .await
             .expect("failed to shutdown in server-side");
+        shutdown_finished_tx.send(()).unwrap();
     });
 
     let addr = addr_rx.await.expect("failed to get addr");
 
-    Serve { addr, shutdown_tx }
+    Serve {
+        addr,
+        shutdown_tx,
+        shutdown_finished_rx,
+    }
+}
+
+impl Serve {
+    async fn shutdown(self) -> Result<(), BoxError> {
+        self.shutdown_tx
+            .send(())
+            .expect("failed to shutdown in client-side");
+        self.shutdown_finished_rx.await?;
+        Ok(())
+    }
 }
 
 #[it("should return index page")]
@@ -88,7 +103,7 @@ async fn f() -> Result<(), BoxError> {
     let content_type: &str = parts.headers.get("content-type").unwrap().to_str()?;
     assert_eq!(content_type, "text/html");
 
-    serve.shutdown_tx.send(()).expect("shutdown failed");
+    serve.shutdown().await?;
     Ok(())
 }
 
@@ -120,6 +135,6 @@ async fn f() -> Result<(), BoxError> {
         .to_str()?;
     assert_eq!(access_control_allow_origin, "*");
 
-    serve.shutdown_tx.send(()).expect("shutdown failed");
+    serve.shutdown().await?;
     Ok(())
 }
