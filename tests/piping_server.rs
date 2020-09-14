@@ -246,3 +246,33 @@ async fn f() -> Result<(), BoxError> {
     serve.shutdown().await?;
     Ok(())
 }
+
+#[it("should reject Service Worker registration request")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let uri = format!("http://{}/mysw.js", serve.addr).parse::<http::Uri>()?;
+
+    let get_req = hyper::Request::builder()
+        .method(hyper::Method::GET)
+        .uri(uri.clone())
+        .header("service-worker", "script")
+        .body(hyper::Body::empty())?;
+    let client = Client::new();
+    let res = client.request(get_req).await?;
+
+    let (parts, _body) = res.into_parts();
+
+    assert_eq!(parts.status, http::StatusCode::BAD_REQUEST);
+    assert_eq!(
+        parts
+            .headers
+            .get("access-control-allow-origin")
+            .unwrap()
+            .to_str()?,
+        "*"
+    );
+
+    serve.shutdown().await?;
+    Ok(())
+}
