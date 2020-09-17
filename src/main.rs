@@ -6,12 +6,9 @@ use structopt::StructOpt;
 use tokio::net::TcpListener;
 use tokio_rustls::TlsAcceptor;
 
-mod macros;
-mod piping_server;
-mod req_res_handler;
-mod util;
-use piping_server::PipingServer;
-use req_res_handler::req_res_handler;
+use piping_server::piping_server::PipingServer;
+use piping_server::req_res_handler::req_res_handler;
+use piping_server::util;
 
 /// Piping Server in Rust
 #[derive(StructOpt, Debug)]
