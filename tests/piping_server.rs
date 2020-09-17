@@ -276,3 +276,79 @@ async fn f() -> Result<(), BoxError> {
     serve.shutdown().await?;
     Ok(())
 }
+
+// TODO: Server error "panicked at 'called `Result::unwrap()` on an `Err` value: Canceled'" at `sender_req_body_finish_waiter.await.unwrap();` when using `cargo test -- --nocapture`
+#[it("should handle connection (sender: O, receiver: O)")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
+
+    let send_str_body = "this is a content";
+    let send_req = hyper::Request::builder()
+        .method(hyper::Method::POST)
+        .uri(uri.clone())
+        .body(hyper::Body::from(send_str_body))?;
+
+    let client = Client::new();
+    let send_res = client.request(send_req).await?;
+    let (send_res_parts, _send_res_body) = send_res.into_parts();
+    assert_eq!(send_res_parts.status, http::StatusCode::OK);
+
+    let get_req = hyper::Request::builder()
+        .method(hyper::Method::GET)
+        .uri(uri.clone())
+        .body(hyper::Body::empty())?;
+    let client = Client::new();
+    let res = client.request(get_req).await?;
+
+    let body = res.into_body();
+    let all_bytes: Vec<u8> = read_all_body(body).await;
+
+    let expect = send_str_body.to_owned().into_bytes();
+    assert_eq!(all_bytes, expect);
+
+    serve.shutdown_tx.send(()).expect("shutdown failed");
+    Ok(())
+}
+
+// TODO: Server error "panicked at 'called `Result::unwrap()` on an `Err` value: Canceled'" at `sender_req_body_finish_waiter.await.unwrap();` when using `cargo test -- --nocapture`
+#[it("should handle connection (receiver: O, sender: O)")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
+
+    let (get_res_tx, get_res_rx) = oneshot::channel();
+    tokio::spawn({
+        let uri = uri.clone();
+        async {
+            let get_req = hyper::Request::builder()
+                .method(hyper::Method::GET)
+                .uri(uri)
+                .body(hyper::Body::empty())?;
+            let client = Client::new();
+            let get_res = client.request(get_req).await?;
+            get_res_tx.send(get_res).unwrap();
+            Ok::<_, BoxError>(())
+        }
+    });
+
+    let send_str_body = "this is a content";
+    let send_req = hyper::Request::builder()
+        .method(hyper::Method::POST)
+        .uri(uri.clone())
+        .body(hyper::Body::from(send_str_body))?;
+
+    let client = Client::new();
+    let send_res = client.request(send_req).await?;
+    assert_eq!(send_res.status(), http::StatusCode::OK);
+
+    let body = get_res_rx.await?.into_body();
+    let all_bytes: Vec<u8> = read_all_body(body).await;
+    let expect = send_str_body.to_owned().into_bytes();
+    assert_eq!(all_bytes, expect);
+
+    serve.shutdown_tx.send(()).expect("shutdown failed");
+    Ok(())
+}

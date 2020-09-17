@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    - run: cargo test
+    - run: cargo test -- --color=always --nocapture
     - name: Release build
       run: |
         set -eux
@@ -58,7 +58,7 @@ jobs:
     runs-on: macOS-10.15
     steps:
     - uses: actions/checkout@v2
-    - run: cargo test
+    - run: cargo test -- --color=always --nocapture
     - run: cargo build --release
     - name: Archive
       run: |
