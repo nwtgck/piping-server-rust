@@ -277,7 +277,6 @@ async fn f() -> Result<(), BoxError> {
     Ok(())
 }
 
-// TODO: Server error "panicked at 'called `Result::unwrap()` on an `Err` value: Canceled'" at `sender_req_body_finish_waiter.await.unwrap();` when using `cargo test -- --nocapture`
 #[it("should handle connection (sender: O, receiver: O)")]
 async fn f() -> Result<(), BoxError> {
     let serve: Serve = serve().await;
@@ -312,7 +311,6 @@ async fn f() -> Result<(), BoxError> {
     Ok(())
 }
 
-// TODO: Server error "panicked at 'called `Result::unwrap()` on an `Err` value: Canceled'" at `sender_req_body_finish_waiter.await.unwrap();` when using `cargo test -- --nocapture`
 #[it("should handle connection (receiver: O, sender: O)")]
 async fn f() -> Result<(), BoxError> {
     let serve: Serve = serve().await;

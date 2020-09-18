@@ -119,3 +119,28 @@ where
         self.acceptor.as_mut().poll_next(cx)
     }
 }
+
+pin_project! {
+    pub struct One<T> {
+        value: Option<T>,
+    }
+}
+
+impl<T> One<T> {
+    fn new(x: T) -> Self {
+        One { value: Some(x) }
+    }
+}
+
+impl<T> futures::stream::Stream for One<T> {
+    type Item = T;
+
+    fn poll_next(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        Poll::Ready(self.project().value.take())
+    }
+}
+
+#[inline]
+pub fn one_stream<T>(x: T) -> One<T> {
+    One::new(x)
+}
