@@ -452,7 +452,7 @@ dependencies = [
  "hyper 0.13.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper-rustls 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
- "pin-project 0.4.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pin-project-lite 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustls 0.18.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "specit 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
