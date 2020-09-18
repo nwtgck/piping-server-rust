@@ -1,5 +1,6 @@
 use futures::channel::oneshot;
 use futures::task::{Context, Poll};
+use pin_project::pin_project;
 use std::convert::TryFrom;
 use std::pin::Pin;
 use tokio::net::TcpStream;
@@ -32,20 +33,26 @@ impl OptionHeaderBuilder for http::response::Builder {
     }
 }
 
+#[pin_project(project = FinishDetectableStreamProj)]
 pub struct FinishDetectableStream<S> {
-    stream_pin: Pin<Box<S>>,
+    #[pin]
+    stream_pin: S,
     finish_notifier: Option<oneshot::Sender<()>>,
 }
 
 impl<S: futures::stream::Stream> futures::stream::Stream for FinishDetectableStream<S> {
     type Item = S::Item;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        match self.stream_pin.as_mut().poll_next(cx) {
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let FinishDetectableStreamProj {
+            mut stream_pin,
+            finish_notifier,
+        } = self.project();
+        match stream_pin.as_mut().poll_next(cx) {
             // If body is finished
             Poll::Ready(None) => {
                 // Notify finish
-                if let Some(notifier) = self.finish_notifier.take() {
+                if let Some(notifier) = finish_notifier.take() {
                     notifier.send(()).unwrap();
                 }
                 Poll::Ready(None)
@@ -61,7 +68,7 @@ pub fn finish_detectable_stream<S>(
     let (finish_notifier, finish_waiter) = oneshot::channel::<()>();
     (
         FinishDetectableStream {
-            stream_pin: Box::pin(stream),
+            stream_pin: stream,
             finish_notifier: Some(finish_notifier),
         },
         finish_waiter,
