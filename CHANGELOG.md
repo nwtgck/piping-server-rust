@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.8.1] - 2020-09-19
+### Changed
+* (internal) Use pin-project-lite for removing Box from FinishDetectableStream
+* (internal) Not use `tokio::spawn()`
+* Update dependencies
+
 ## [0.8.0] - 2020-09-06
 ### Added
 * Send messages to sender before transferring
@@ -15,7 +21,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [0.7.1] - 2020-09-01
 ### Changed
-* Improve implementation (internal)
+* (internal) Improve implementation
 * Update dependencies
 
 ## [0.7.0] - 2020-08-30
@@ -26,7 +32,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [0.6.2] - 2020-08-29
 ### Changed
-* Minimize Docker image (Docker)
+* (Docker) Minimize Docker image
 * Reject Service Worker registration
 
 ## [0.6.1] - 2020-08-26
@@ -124,7 +130,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/nwtgck/piping-server-rust/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.7.0...v0.7.1
