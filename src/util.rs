@@ -1,8 +1,8 @@
+use core::convert::TryFrom;
+use core::pin::Pin;
+use core::task::{Context, Poll};
 use futures::channel::oneshot;
-use futures::task::{Context, Poll};
 use pin_project_lite::pin_project;
-use std::convert::TryFrom;
-use std::pin::Pin;
 use tokio::net::TcpStream;
 use tokio_rustls::server::TlsStream;
 

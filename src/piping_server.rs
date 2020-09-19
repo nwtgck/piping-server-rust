@@ -1,11 +1,12 @@
+use core::pin::Pin;
 use futures::channel::mpsc;
 use futures::channel::oneshot;
 use futures::future::FutureExt;
 use futures::stream::{Stream, StreamExt};
+use http::{Method, Request, Response};
 use hyper::body::Bytes;
-use hyper::{Body, Method, Request, Response};
+use hyper::Body;
 use std::collections::HashMap;
-use std::pin::Pin;
 use std::sync::{Arc, RwLock};
 
 use crate::util::{
