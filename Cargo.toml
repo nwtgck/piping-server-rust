@@ -17,6 +17,7 @@ tokio-rustls = "0.14"
 log = "0.4"
 env_logger = "0.7"
 pin-project-lite = "0.1"
+genawaiter = { version = "0.99", default-features = false, features = ["futures03"] }
 
 [dev-dependencies]
 specit = {version  = "0.3.0", features = ["tokio"] }

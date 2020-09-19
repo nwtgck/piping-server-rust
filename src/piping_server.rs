@@ -1,8 +1,8 @@
 use core::pin::Pin;
 use futures::channel::mpsc;
 use futures::channel::oneshot;
-use futures::future::FutureExt;
 use futures::stream::{Stream, StreamExt};
+use genawaiter::sync::Gen;
 use http::{Method, Request, Response};
 use hyper::body::Bytes;
 use hyper::Body;
@@ -312,23 +312,18 @@ fn transfer(path: String, data_sender: DataSender, data_receiver: DataReceiver) 
         .write()
         .unwrap()
         .unbounded_send(
-            one_stream(Ok(Bytes::from(
-                "[INFO] Start sending to 1 receiver(s)...\n",
-            )))
-            .chain(
+            Gen::new(|co| async move {
+                co.yield_(Ok(Bytes::from(
+                    "[INFO] Start sending to 1 receiver(s)...\n",
+                )))
+                .await;
                 // Wait for sender's request body finished
-                sender_req_body_finish_waiter
-                    .into_stream()
-                    .map(|_| Ok(Bytes::new())),
-            )
-            .chain(
+                sender_req_body_finish_waiter.await.unwrap();
                 // Notify sender when sending finished
-                one_stream(Ok(Bytes::from("[INFO] Sent successfully!\n"))),
-            )
-            .chain(one_stream(Ok(Bytes::new())).map(move |x| {
+                co.yield_(Ok(Bytes::from("[INFO] Sent successfully!\n")))
+                    .await;
                 log::info!("Transfer end: '{}'", path);
-                x
-            }))
+            })
             .boxed(),
         )
         .unwrap();
