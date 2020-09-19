@@ -2,4 +2,4 @@ build:
   docker:
     web: heroku.dockerfile
 run:
-  web: /app/target/release/piping-server --http-port=$PORT
+  web: /usr/local/bin/piping-server --http-port=$PORT

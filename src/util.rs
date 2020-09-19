@@ -1,7 +1,8 @@
+use core::convert::TryFrom;
+use core::pin::Pin;
+use core::task::{Context, Poll};
 use futures::channel::oneshot;
-use futures::task::{Context, Poll};
-use std::convert::TryFrom;
-use std::pin::Pin;
+use pin_project_lite::pin_project;
 use tokio::net::TcpStream;
 use tokio_rustls::server::TlsStream;
 
@@ -32,20 +33,24 @@ impl OptionHeaderBuilder for http::response::Builder {
     }
 }
 
-pub struct FinishDetectableStream<S> {
-    stream_pin: Pin<Box<S>>,
-    finish_notifier: Option<oneshot::Sender<()>>,
+pin_project! {
+    pub struct FinishDetectableStream<S> {
+        #[pin]
+        stream_pin: S,
+        finish_notifier: Option<oneshot::Sender<()>>,
+    }
 }
 
 impl<S: futures::stream::Stream> futures::stream::Stream for FinishDetectableStream<S> {
     type Item = S::Item;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        match self.stream_pin.as_mut().poll_next(cx) {
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let mut this = self.project();
+        match this.stream_pin.as_mut().poll_next(cx) {
             // If body is finished
             Poll::Ready(None) => {
                 // Notify finish
-                if let Some(notifier) = self.finish_notifier.take() {
+                if let Some(notifier) = this.finish_notifier.take() {
                     notifier.send(()).unwrap();
                 }
                 Poll::Ready(None)
@@ -61,7 +66,7 @@ pub fn finish_detectable_stream<S>(
     let (finish_notifier, finish_waiter) = oneshot::channel::<()>();
     (
         FinishDetectableStream {
-            stream_pin: Box::pin(stream),
+            stream_pin: stream,
             finish_notifier: Some(finish_notifier),
         },
         finish_waiter,
@@ -113,4 +118,29 @@ where
     ) -> core::task::Poll<Option<Result<Self::Conn, Self::Error>>> {
         self.acceptor.as_mut().poll_next(cx)
     }
+}
+
+pin_project! {
+    pub struct One<T> {
+        value: Option<T>,
+    }
+}
+
+impl<T> One<T> {
+    fn new(x: T) -> Self {
+        One { value: Some(x) }
+    }
+}
+
+impl<T> futures::stream::Stream for One<T> {
+    type Item = T;
+
+    fn poll_next(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        Poll::Ready(self.project().value.take())
+    }
+}
+
+#[inline]
+pub fn one_stream<T>(x: T) -> One<T> {
+    One::new(x)
 }

@@ -1,10 +1,18 @@
+use core::pin::Pin;
+use futures::channel::mpsc;
 use futures::channel::oneshot;
+use futures::future::FutureExt;
+use futures::stream::{Stream, StreamExt};
+use http::{Method, Request, Response};
 use hyper::body::Bytes;
-use hyper::{Body, Method, Request, Response};
+use hyper::Body;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use crate::util::{finish_detectable_stream, FinishDetectableStream, OptionHeaderBuilder};
+use crate::util::{
+    finish_detectable_stream, one_stream, FinishDetectableStream, OptionHeaderBuilder,
+};
+use futures_util::core_reexport::convert::Infallible;
 
 mod reserved_paths {
     crate::with_values! {
@@ -17,7 +25,9 @@ mod reserved_paths {
 
 struct DataSender {
     req: Request<Body>,
-    res_body_sender: hyper::body::Sender,
+    res_body_streams_sender: RwLock<
+        mpsc::UnboundedSender<Pin<Box<dyn Stream<Item = Result<Bytes, Infallible>> + Send>>>,
+    >,
 }
 
 struct DataReceiver {
@@ -118,21 +128,23 @@ impl PipingServer {
                             let sender = path_to_sender.write().unwrap().remove(path);
                             match sender {
                                 // If sender is found
-                                Some(mut data_sender) => {
+                                Some(data_sender) => {
                                     data_sender
-                                        .res_body_sender
-                                        .send_data(Bytes::from(
-                                            "[INFO] A receiver was connected.\n",
-                                        ))
-                                        .await
+                                        .res_body_streams_sender
+                                        .write()
+                                        .unwrap()
+                                        .unbounded_send(
+                                            one_stream(Ok(Bytes::from(
+                                                "[INFO] A receiver was connected.\n",
+                                            )))
+                                            .boxed(),
+                                        )
                                         .unwrap();
-                                    // }
                                     transfer(
                                         path.to_string(),
                                         data_sender,
                                         DataReceiver { res_sender },
-                                    )
-                                    .await;
+                                    );
                                 }
                                 // If sender is not found
                                 None => {
@@ -174,8 +186,10 @@ impl PipingServer {
                         return;
                     }
 
-                    // Return response to the sender (NOTE: message body will be chunked transferred.)
-                    let (mut res_body_sender, body) = hyper::Body::channel();
+                    let (tx, rx) = mpsc::unbounded::<
+                        Pin<Box<dyn Stream<Item = Result<Bytes, Infallible>> + Send>>,
+                    >();
+                    let body = hyper::body::Body::wrap_stream(rx.flatten());
                     let sender_res = Response::builder()
                         .header("Access-Control-Allow-Origin", "*")
                         .body(body)
@@ -186,33 +200,36 @@ impl PipingServer {
                     match receiver {
                         // If receiver is found
                         Some(data_receiver) => {
-                            res_body_sender
-                                .send_data(Bytes::from(
+                            tx.unbounded_send(
+                                one_stream(Ok(Bytes::from(
                                     "[INFO] 1 receiver(s) has/have been connected.\n",
-                                ))
-                                .await
-                                .unwrap();
+                                )))
+                                .boxed(),
+                            )
+                            .unwrap();
                             transfer(
                                 path.to_string(),
                                 DataSender {
                                     req,
-                                    res_body_sender,
+                                    res_body_streams_sender: RwLock::new(tx),
                                 },
                                 data_receiver,
-                            )
-                            .await;
+                            );
                         }
                         // If receiver is not found
                         None => {
-                            res_body_sender
-                                .send_data(Bytes::from("[INFO] Waiting for 1 receiver(s)...\n"))
-                                .await
-                                .unwrap();
+                            tx.unbounded_send(
+                                one_stream(Ok(Bytes::from(
+                                    "[INFO] Waiting for 1 receiver(s)...\n",
+                                )))
+                                .boxed(),
+                            )
+                            .unwrap();
                             path_to_sender.write().unwrap().insert(
                                 path.to_string(),
                                 DataSender {
                                     req,
-                                    res_body_sender,
+                                    res_body_streams_sender: RwLock::new(tx),
                                 },
                             );
                         }
@@ -254,12 +271,10 @@ impl PipingServer {
     }
 }
 
-async fn transfer(path: String, data_sender: DataSender, data_receiver: DataReceiver) {
+fn transfer(path: String, data_sender: DataSender, data_receiver: DataReceiver) {
     log::info!("Transfer start: '{}'", path);
 
-    // DataSender {req: req1, res_body_sender: s1} = data_sender;
     let data_sender_req = data_sender.req;
-    let mut data_sender_res_body_sender = data_sender.res_body_sender;
 
     // Get sender's header
     let sender_header = data_sender_req.headers();
@@ -292,19 +307,29 @@ async fn transfer(path: String, data_sender: DataSender, data_receiver: DataRece
     // Return response to receiver
     data_receiver.res_sender.send(receiver_res).unwrap();
 
-    tokio::task::spawn(async move {
-        // Notify sender when sending starts
-        data_sender_res_body_sender
-            .send_data(Bytes::from("[INFO] Start sending to 1 receiver(s)...\n"))
-            .await
-            .unwrap();
-        // Wait for sender's request body finished
-        sender_req_body_finish_waiter.await.unwrap();
-        // Notify sender when sending finished
-        data_sender_res_body_sender
-            .send_data(Bytes::from("[INFO] Sent successfully!\n"))
-            .await
-            .unwrap();
-        log::info!("Transfer end: '{}'", path);
-    });
+    data_sender
+        .res_body_streams_sender
+        .write()
+        .unwrap()
+        .unbounded_send(
+            one_stream(Ok(Bytes::from(
+                "[INFO] Start sending to 1 receiver(s)...\n",
+            )))
+            .chain(
+                // Wait for sender's request body finished
+                sender_req_body_finish_waiter
+                    .into_stream()
+                    .map(|_| Ok(Bytes::new())),
+            )
+            .chain(
+                // Notify sender when sending finished
+                one_stream(Ok(Bytes::from("[INFO] Sent successfully!\n"))),
+            )
+            .chain(one_stream(Ok(Bytes::new())).map(move |x| {
+                log::info!("Transfer end: '{}'", path);
+                x
+            }))
+            .boxed(),
+        )
+        .unwrap();
 }

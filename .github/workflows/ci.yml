@@ -7,7 +7,8 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    - name: Build
+    - run: cargo test -- --color=always --nocapture
+    - name: Release build
       run: |
         set -eux
         docker run --rm -v "$(pwd)":/home/rust/src ekidd/rust-musl-builder:1.46.0 sh -c 'sudo chown -R rust:rust . && cargo build --release'
@@ -57,6 +58,7 @@ jobs:
     runs-on: macOS-10.15
     steps:
     - uses: actions/checkout@v2
+    - run: cargo test -- --color=always --nocapture
     - run: cargo build --release
     - name: Archive
       run: |

@@ -1,7 +1,8 @@
+use core::future::Future;
 use futures::channel::oneshot;
 use futures::FutureExt;
-use hyper::{Body, Request, Response};
-use std::future::Future;
+use http::{Request, Response};
+use hyper::Body;
 
 // NOTE: futures::future::Map<..., oneshot::Receiver, ...> can be a Future
 pub fn req_res_handler<Fut>(
