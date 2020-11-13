@@ -16,7 +16,7 @@ futures-util = "0.3"
 tokio-rustls = "0.14"
 log = "0.4"
 env_logger = "0.8"
-pin-project-lite = "0.1"
+pin-project-lite = "0.2"
 
 [dev-dependencies]
 specit = {version  = "0.3.0", features = ["tokio"] }
