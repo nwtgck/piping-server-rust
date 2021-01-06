@@ -5,12 +5,11 @@ authors = ["Ryo Ota <nwtgck@nwtgck.org>"]
 edition = "2018"
 
 [dependencies]
-hyper = { version = "0.14", features = ["stream", "server", "client", "http1", "h2"] }
+hyper = { version = "0.14", features = ["stream", "server", "http1", "h2"] }
 futures = "0.3"
 structopt = "0.3"
 http = "0.2"
-# FIXME: Not use "full"
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.0", features = ["rt-multi-thread", "macros"] }
 rustls = "0.19"
 hyper-rustls = "0.22"
 futures-util = "0.3"
