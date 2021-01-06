@@ -12,7 +12,6 @@ use std::sync::{Arc, RwLock};
 use crate::util::{
     finish_detectable_stream, one_stream, FinishDetectableStream, OptionHeaderBuilder,
 };
-use futures_util::core_reexport::convert::Infallible;
 
 mod reserved_paths {
     crate::with_values! {
@@ -26,7 +25,7 @@ mod reserved_paths {
 struct DataSender {
     req: Request<Body>,
     res_body_streams_sender: RwLock<
-        mpsc::UnboundedSender<Pin<Box<dyn Stream<Item = Result<Bytes, Infallible>> + Send>>>,
+        mpsc::UnboundedSender<Pin<Box<dyn Stream<Item = Result<Bytes, std::convert::Infallible>> + Send>>>,
     >,
 }
 
@@ -187,7 +186,7 @@ impl PipingServer {
                     }
 
                     let (tx, rx) = mpsc::unbounded::<
-                        Pin<Box<dyn Stream<Item = Result<Bytes, Infallible>> + Send>>,
+                        Pin<Box<dyn Stream<Item = Result<Bytes, std::convert::Infallible>> + Send>>,
                     >();
                     let body = hyper::body::Body::wrap_stream(rx.flatten());
                     let sender_res = Response::builder()
