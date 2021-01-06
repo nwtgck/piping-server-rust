@@ -92,7 +92,7 @@ async fn main() -> std::io::Result<()> {
             ));
         }
     } else {
-        futures::future::Either::Right(futures::future::ok::<_, hyper::Error>(()))
+        futures::future::Either::Right(futures::future::ok(()))
     };
 
     let http_svc = make_service_fn(|_| {
