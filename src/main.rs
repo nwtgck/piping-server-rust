@@ -55,10 +55,8 @@ async fn main() -> std::io::Result<()> {
             // Create a TCP listener via tokio.
             tcp = TcpListener::bind(&addr).await?;
             tls_acceptor = TlsAcceptor::from(std::sync::Arc::new(tls_cfg));
-            // let tls_acceptor = tls_acceptor_opt.as_ref().unwrap();
             // Prepare a long-running future stream to accept and serve clients.
-            let incoming_tls_stream = tcp
-                .incoming()
+            let incoming_tls_stream = util::TokioIncoming::new(&mut tcp)
                 .map_err(|e| util::make_io_error(format!("Incoming failed: {:?}", e)))
                 // (base: https://github.com/cloudflare/wrangler/pull/1485/files)
                 .filter_map(|s| async {
@@ -94,7 +92,7 @@ async fn main() -> std::io::Result<()> {
             ));
         }
     } else {
-        futures::future::Either::Right(futures::future::ok(()))
+        futures::future::Either::Right(futures::future::ok::<_, hyper::Error>(()))
     };
 
     let http_svc = make_service_fn(|_| {
