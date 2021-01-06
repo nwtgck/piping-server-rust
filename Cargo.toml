@@ -10,7 +10,7 @@ futures = "0.3"
 structopt = "0.3"
 http = "0.2"
 tokio = { version = "0.2", features = ["macros", "stream"] }
-rustls = "0.18"
+rustls = "0.19"
 hyper-rustls = "0.22"
 futures-util = "0.3"
 tokio-rustls = "0.14"

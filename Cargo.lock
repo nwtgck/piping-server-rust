@@ -622,7 +622,7 @@ dependencies = [
  "hyper-rustls",
  "log",
  "pin-project-lite 0.2.1",
- "rustls 0.18.1",
+ "rustls 0.19.0",
  "specit",
  "structopt",
  "tokio 0.2.22",
