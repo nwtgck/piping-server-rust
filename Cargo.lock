@@ -395,7 +395,7 @@ dependencies = [
  "rustls 0.19.0",
  "rustls-native-certs",
  "tokio 1.0.1",
- "tokio-rustls 0.22.0",
+ "tokio-rustls",
  "webpki",
 ]
 
@@ -626,7 +626,7 @@ dependencies = [
  "specit",
  "structopt",
  "tokio 0.2.22",
- "tokio-rustls 0.14.1",
+ "tokio-rustls",
 ]
 
 [[package]]
@@ -966,18 +966,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "tokio-rustls"
-version = "0.14.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e12831b255bcfa39dc0436b01e19fea231a37db570686c06ee72c423479f889a"
-dependencies = [
- "futures-core",
- "rustls 0.18.1",
- "tokio 0.2.22",
- "webpki",
 ]
 
 [[package]]

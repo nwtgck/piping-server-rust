@@ -13,7 +13,7 @@ tokio = { version = "0.2", features = ["macros", "stream"] }
 rustls = "0.18"
 hyper-rustls = "0.22"
 futures-util = "0.3"
-tokio-rustls = "0.14"
+tokio-rustls = "0.22"
 log = "0.4"
 env_logger = "0.8"
 pin-project-lite = "0.2"
