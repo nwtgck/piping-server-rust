@@ -1,6 +1,6 @@
 # NOTE: Multi-stage Build
 
-FROM ekidd/rust-musl-builder:1.45.2 as build
+FROM ekidd/rust-musl-builder:1.49.0 as build
 
 # Copy to current directory and change the owner
 COPY --chown=rust:rust . ./
