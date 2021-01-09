@@ -485,9 +485,9 @@ dependencies = [
 
 [[package]]
 name = "pin-project-lite"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e36743d754ccdf9954c2e352ce2d4b106e024c814f6499c2dadff80da9a442d8"
+checksum = "6196deb704a4cebec440b7a50d05d55410be7c923caf0447f9d052508b8dca3c"
 
 [[package]]
 name = "pin-utils"
