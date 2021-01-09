@@ -19,4 +19,4 @@ env_logger = "0.8"
 pin-project-lite = "0.2"
 
 [dev-dependencies]
-specit = {version  = "0.3.0", features = ["tokio"] }
+specit = {version  = "0.4.0", features = ["tokio"] }
