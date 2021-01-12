@@ -82,7 +82,7 @@ async fn main() -> std::io::Result<()> {
                 futures::future::ok::<_, Infallible>(service_fn(handler))
             });
             let https_server = Server::builder(util::HyperAcceptor {
-                acceptor: Box::pin(incoming_tls_stream),
+                acceptor: incoming_tls_stream,
             })
             .serve(https_svc);
             futures::future::Either::Left(https_server)

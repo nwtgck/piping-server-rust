@@ -102,8 +102,11 @@ pub fn load_tls_config(
     Ok(cfg)
 }
 
-pub struct HyperAcceptor<S> {
-    pub acceptor: core::pin::Pin<Box<S>>,
+pin_project! {
+    pub struct HyperAcceptor<S> {
+        #[pin]
+        pub acceptor: S,
+    }
 }
 
 impl<S> hyper::server::accept::Accept for HyperAcceptor<S>
@@ -114,10 +117,10 @@ where
     type Error = std::io::Error;
 
     fn poll_accept(
-        mut self: core::pin::Pin<&mut Self>,
+        self: core::pin::Pin<&mut Self>,
         cx: &mut core::task::Context,
     ) -> core::task::Poll<Option<Result<Self::Conn, Self::Error>>> {
-        self.acceptor.as_mut().poll_next(cx)
+        self.project().acceptor.as_mut().poll_next(cx)
     }
 }
 
