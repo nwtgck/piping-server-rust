@@ -25,7 +25,9 @@ mod reserved_paths {
 struct DataSender {
     req: Request<Body>,
     res_body_streams_sender: RwLock<
-        mpsc::UnboundedSender<Pin<Box<dyn Stream<Item = Result<Bytes, std::convert::Infallible>> + Send>>>,
+        mpsc::UnboundedSender<
+            Pin<Box<dyn Stream<Item = Result<Bytes, std::convert::Infallible>> + Send>>,
+        >,
     >,
 }
 
