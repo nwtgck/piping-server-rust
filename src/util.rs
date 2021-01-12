@@ -2,6 +2,7 @@ use core::convert::TryFrom;
 use core::pin::Pin;
 use core::task::{Context, Poll};
 use futures::channel::oneshot;
+use futures::ready;
 use pin_project_lite::pin_project;
 use tokio::net::TcpStream;
 use tokio_rustls::server::TlsStream;
@@ -118,15 +119,6 @@ where
     ) -> core::task::Poll<Option<Result<Self::Conn, Self::Error>>> {
         self.acceptor.as_mut().poll_next(cx)
     }
-}
-
-macro_rules! ready {
-    ($e:expr $(,)?) => {
-        match $e {
-            std::task::Poll::Ready(t) => t,
-            std::task::Poll::Pending => return std::task::Poll::Pending,
-        }
-    };
 }
 
 // (base: https://github.com/tokio-rs/tokio/blob/tokio-0.2.22/tokio/src/net/tcp/incoming.rs)
