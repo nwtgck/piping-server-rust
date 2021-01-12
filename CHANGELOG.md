@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.8.2] - 2021-01-12
+### Changed
+* (internal) Update dependencies and update codes for the updates
+
 ## [0.8.1] - 2020-09-19
 ### Changed
 * (internal) Use pin-project-lite for removing Box from FinishDetectableStream
@@ -130,7 +134,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.8.2...HEAD
+[0.8.2]: https://github.com/nwtgck/piping-server-rust/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/nwtgck/piping-server-rust/compare/v0.7.1...v0.7.2

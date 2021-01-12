@@ -43,7 +43,7 @@ async fn main() -> std::io::Result<()> {
     let piping_server = &PipingServer::new();
 
     // Set default log level
-    env_logger::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let https_server = if opt.enable_https {
         if let (Some(https_port), Some(crt_path), Some(key_path)) =
@@ -55,10 +55,8 @@ async fn main() -> std::io::Result<()> {
             // Create a TCP listener via tokio.
             tcp = TcpListener::bind(&addr).await?;
             tls_acceptor = TlsAcceptor::from(std::sync::Arc::new(tls_cfg));
-            // let tls_acceptor = tls_acceptor_opt.as_ref().unwrap();
             // Prepare a long-running future stream to accept and serve clients.
-            let incoming_tls_stream = tcp
-                .incoming()
+            let incoming_tls_stream = util::TokioIncoming::new(&mut tcp)
                 .map_err(|e| util::make_io_error(format!("Incoming failed: {:?}", e)))
                 // (base: https://github.com/cloudflare/wrangler/pull/1485/files)
                 .filter_map(|s| async {

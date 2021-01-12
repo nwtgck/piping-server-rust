@@ -1,6 +1,6 @@
 # NOTE: Multi-stage Build
 
-FROM ekidd/rust-musl-builder:1.45.2 as build
+FROM ekidd/rust-musl-builder:1.49.0 as build
 
 # Copy to current directory and change the owner
 COPY --chown=rust:rust . ./
@@ -8,7 +8,7 @@ COPY --chown=rust:rust . ./
 RUN cargo build --release
 
 
-FROM alpine:3.12.0
+FROM alpine:3.12.3
 LABEL maintainer="Ryo Ota <nwtgck@nwtgck.org>"
 
 # Copy executable

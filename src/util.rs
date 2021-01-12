@@ -2,6 +2,7 @@ use core::convert::TryFrom;
 use core::pin::Pin;
 use core::task::{Context, Poll};
 use futures::channel::oneshot;
+use futures::ready;
 use pin_project_lite::pin_project;
 use tokio::net::TcpStream;
 use tokio_rustls::server::TlsStream;
@@ -117,6 +118,45 @@ where
         cx: &mut core::task::Context,
     ) -> core::task::Poll<Option<Result<Self::Conn, Self::Error>>> {
         self.acceptor.as_mut().poll_next(cx)
+    }
+}
+
+// (base: https://github.com/tokio-rs/tokio/blob/tokio-0.2.22/tokio/src/net/tcp/incoming.rs)
+/// Stream returned by the `TcpListener::incoming` function representing the
+/// stream of sockets received from a listener.
+#[must_use = "streams do nothing unless polled"]
+#[derive(Debug)]
+pub struct TokioIncoming<'a> {
+    inner: &'a mut tokio::net::TcpListener,
+}
+
+impl TokioIncoming<'_> {
+    pub fn new(listener: &mut tokio::net::TcpListener) -> TokioIncoming<'_> {
+        TokioIncoming { inner: listener }
+    }
+
+    /// Attempts to poll `TcpStream` by polling inner `TcpListener` to accept
+    /// connection.
+    ///
+    /// If `TcpListener` isn't ready yet, `Poll::Pending` is returned and
+    /// current task will be notified by a waker.
+    #[allow(unused_mut)]
+    pub fn poll_accept(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<tokio::io::Result<TcpStream>> {
+        let (socket, _) = ready!(self.inner.poll_accept(cx))?;
+        Poll::Ready(Ok(socket))
+    }
+}
+
+impl futures::stream::Stream for TokioIncoming<'_> {
+    type Item = tokio::io::Result<TcpStream>;
+
+    #[allow(unused_mut)]
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let (socket, _) = ready!(self.inner.poll_accept(cx))?;
+        Poll::Ready(Some(Ok(socket)))
     }
 }
 
