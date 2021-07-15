@@ -3,6 +3,8 @@
 
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
+[![Packaging status](https://repology.org/badge/vertical-allrepos/piping-server.svg)](https://repology.org/project/piping-server/versions)
+
 [Piping Server](https://github.com/nwtgck/piping-server) written in Rust
 
 ## Purpose
@@ -20,7 +22,7 @@ You can choose some ways to run a server.
 
 ### Way 1: Binary
 
-Executable files are available on [GitHub Release](https://github.com/nwtgck/piping-server-rust/releases) for Linux and macOS. You can download it and run it.
+Executable files are available on [GitHub Release](https://github.com/nwtgck/piping-server-rust/releases) for Linux and macOS. You can download it and run it. Alternatively you can use a package for your distribution as mentioned in the badge in the head of the README.
 
 The executable file for Linux is portable because it is statically linked.
 
