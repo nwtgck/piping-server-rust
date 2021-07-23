@@ -18,26 +18,48 @@ Safe, Fast and No garbage collection (GC)
 ## Run a server
 You can choose some ways to run a server.
 
-### Way 1: Binary
-
-Executable files are available on [GitHub Release](https://github.com/nwtgck/piping-server-rust/releases) for Linux and macOS. You can download it and run it.
-
-The executable file for Linux is portable because it is statically linked.
-
-### Way 2: Docker
+### Way 1: Docker
 Run a Piping Server on <http://localhost:8181> by the following command.
 
 ```rs
 docker run -p 8181:8080 --init nwtgck/piping-server-rust
 ```
 
-### Way 3: Cargo
-You can clone, build and run this project as follows.
+### Way 2: Binary for Linux
 
 ```bash
+# Download and extract
+curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.8.4/piping-server-x86-64-linux.tar.gz | tar xzf -
+# Run on 8181 port
+./piping-server-x86-64-linux/piping-server --http-port=8181
+```
+
+### Way 3: Binary for macOS
+
+```bash
+# Download and extract
+curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.8.4/piping-server-x86-64-apple-darwin.tar.gz | tar xzf -
+# Run on 8181 port
+./piping-server-x86-64-apple-darwin/piping-server --http-port=8181
+```
+
+Executable files are available on [GitHub Release](https://github.com/nwtgck/piping-server-rust/releases) for Linux and macOS. The executable file for Linux is portable because it is statically linked.
+
+### Way4: Heroku
+
+Click the button bellow to deploy.
+
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+
+### Way 5: Build and run by yourself
+You can clone, build and run `piping-server` as follows.
+
+```bash
+# Clone
 git clone https://github.com/nwtgck/piping-server-rust.git
 cd piping-server-rust
-cargo run --release
+# Build and run on 8181 port
+cargo run --release -- --http-port=8181
 ```
 
 ### Server-side help
