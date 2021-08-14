@@ -10,10 +10,6 @@ updates:
   - nwtgck
   assignees:
   - nwtgck
-  ignore:
-  - dependency-name: hyper
-    versions:
-    - 0.14.3
 - package-ecosystem: docker
   directory: "/"
   schedule:
@@ -24,7 +20,3 @@ updates:
   - nwtgck
   assignees:
   - nwtgck
-  ignore:
-  - dependency-name: ubuntu
-    versions:
-    - ">= 19.a, < 20"
