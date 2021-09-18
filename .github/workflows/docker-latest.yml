@@ -21,7 +21,7 @@ jobs:
       run: |
         set -eu
         DOCKER_REPO=nwtgck/piping-server-rust
-        LATEST_TAG=$(ruby -e 'puts ("v" + `git tag`.each_line.map{|l| begin Gem::Version::new(l.sub(/^v/, "")); rescue; nil end}.compact.max.to_s)')
+        LATEST_TAG=$(ruby -e 'puts `git tag`.each_line.map{|t| begin {raw_tag: t, gver: Gem::Version::new(t.sub(/^v/, ""))}; rescue; nil end}.compact.max_by{|v| v[:gver]}[:raw_tag]')
         echo "Latest tag: $LATEST_TAG"
         git reset --hard $LATEST_TAG
         git status
