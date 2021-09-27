@@ -85,20 +85,23 @@ pub fn load_tls_config(
 ) -> std::io::Result<rustls::ServerConfig> {
     // Load public certificate.
     let mut cert_reader = std::io::BufReader::new(std::fs::File::open(cert_path)?);
-    let certs = rustls::internal::pemfile::certs(&mut cert_reader)
+    let certs = rustls_pemfile::certs(&mut cert_reader)
         .map_err(|_| make_io_error("unable to load certificate".to_owned()))?;
     // Load private key.
     let mut key_reader = std::io::BufReader::new(std::fs::File::open(key_path)?);
     // Load and return a single private key.
-    let key = rustls::internal::pemfile::pkcs8_private_keys(&mut key_reader)
+    let key = rustls_pemfile::pkcs8_private_keys(&mut key_reader)
         .map_err(|_| make_io_error("unable to load private key".to_owned()))?
         .remove(0);
-    // Do not use client certificate authentication.
-    let mut cfg = rustls::ServerConfig::new(rustls::NoClientAuth::new());
-    // Select a certificate to use.
-    cfg.set_single_cert(certs, key).unwrap();
+    let certificates: Vec<rustls::Certificate> =
+        certs.into_iter().map(rustls::Certificate).collect();
+    let mut cfg = rustls::ServerConfig::builder()
+        .with_safe_defaults()
+        .with_no_client_auth()
+        .with_single_cert(certificates, rustls::PrivateKey(key))
+        .map_err(|_| make_io_error("failed to create ServerConfig".to_owned()))?;
     // Configure ALPN to accept HTTP/2, HTTP/1.1 in that order.
-    cfg.set_protocols(&[b"h2".to_vec(), b"http/1.1".to_vec()]);
+    cfg.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
     Ok(cfg)
 }
 
