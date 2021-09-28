@@ -65,7 +65,7 @@ impl PipingServer {
         async move {
             let path = req.uri().path();
 
-            log::info!("{} {}", req.method(), req.uri().path());
+            log::info!("{} {:} {:?}", req.method(), req.uri().path(), req.version());
             match req.method() {
                 &Method::GET => {
                     match path {
