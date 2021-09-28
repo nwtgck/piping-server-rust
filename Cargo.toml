@@ -14,7 +14,7 @@ rustls = "0.20"
 rustls-pemfile = "0.2"
 hyper-rustls = "0.22"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
-tokio-rustls = "0.22"
+tokio-rustls = { git = "https://github.com/tokio-rs/tls.git", rev = "8501aafae5c5d0ec97a4cdca25d9e96b63f1d02d" }
 log = "0.4"
 env_logger = "0.9"
 pin-project-lite = "0.2"

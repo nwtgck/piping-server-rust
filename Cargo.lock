@@ -333,7 +333,7 @@ dependencies = [
  "rustls 0.19.1",
  "rustls-native-certs",
  "tokio",
- "tokio-rustls",
+ "tokio-rustls 0.22.0",
  "webpki 0.21.4",
 ]
 
@@ -472,7 +472,7 @@ dependencies = [
  "specit",
  "structopt",
  "tokio",
- "tokio-rustls",
+ "tokio-rustls 0.23.0",
 ]
 
 [[package]]
@@ -810,6 +810,16 @@ dependencies = [
  "rustls 0.19.1",
  "tokio",
  "webpki 0.21.4",
+]
+
+[[package]]
+name = "tokio-rustls"
+version = "0.23.0"
+source = "git+https://github.com/tokio-rs/tls.git?rev=8501aafae5c5d0ec97a4cdca25d9e96b63f1d02d#8501aafae5c5d0ec97a4cdca25d9e96b63f1d02d"
+dependencies = [
+ "rustls 0.20.0",
+ "tokio",
+ "webpki 0.22.0",
 ]
 
 [[package]]
