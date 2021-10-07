@@ -41,6 +41,14 @@ jobs:
         cat /tmp/500M.dat | curl -kT - https://localhost:8443/mypath2 &
         diff <(cat /tmp/500M.dat) <(curl -k https://localhost:8443/mypath2)
         rm /tmp/500M.dat
+
+        # Transfer data using multipart
+        # Make a large random file
+        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=/tmp/500M.dat
+        # Transfer large data over HTTP
+        curl -F myfile=@/tmp/500M.dat localhost:8181/mypath3 &
+        diff <(cat /tmp/500M.dat) <(curl localhost:8181/mypath3)
+        rm /tmp/500M.dat
     - name: Archive
       run: |
         set -eux
@@ -106,6 +114,14 @@ jobs:
         # Transfer large data over HTTPS
         cat /tmp/500M.dat | curl -kT - https://localhost:8443/mypath2 &
         diff <(cat /tmp/500M.dat) <(curl -k https://localhost:8443/mypath2)
+        rm /tmp/500M.dat
+
+        # Transfer data using multipart
+        # Make a large random file
+        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=/tmp/500M.dat
+        # Transfer large data over HTTP
+        curl -F myfile=@/tmp/500M.dat localhost:8181/mypath3 &
+        diff <(cat /tmp/500M.dat) <(curl localhost:8181/mypath3)
         rm /tmp/500M.dat
         
         # Print server log

@@ -17,6 +17,8 @@ tokio-rustls = "0.22"
 log = "0.4"
 env_logger = "0.9"
 pin-project-lite = "0.2"
+mime = "0.3"
+mpart-async = "0.5"
 
 [dev-dependencies]
 specit = {version  = "0.4.0", features = ["tokio"] }

@@ -2,7 +2,7 @@ use core::pin::Pin;
 use futures::channel::mpsc;
 use futures::channel::oneshot;
 use futures::future::FutureExt;
-use futures::stream::{Stream, StreamExt};
+use futures::stream::{Stream, StreamExt, TryStreamExt};
 use http::{Method, Request, Response};
 use hyper::body::Bytes;
 use hyper::Body;
@@ -145,7 +145,9 @@ impl PipingServer {
                                         path.to_string(),
                                         data_sender,
                                         DataReceiver { res_sender },
-                                    );
+                                    )
+                                    .await
+                                    .unwrap();
                                 }
                                 // If sender is not found
                                 None => {
@@ -215,7 +217,9 @@ impl PipingServer {
                                     res_body_streams_sender: RwLock::new(tx),
                                 },
                                 data_receiver,
-                            );
+                            )
+                            .await
+                            .unwrap();
                         }
                         // If receiver is not found
                         None => {
@@ -272,32 +276,83 @@ impl PipingServer {
     }
 }
 
-fn transfer(path: String, data_sender: DataSender, data_receiver: DataReceiver) {
+struct TransferRequest {
+    content_type: Option<hyper::http::HeaderValue>,
+    content_length: Option<hyper::http::HeaderValue>,
+    content_disposition: Option<hyper::http::HeaderValue>,
+    body: Body,
+}
+
+#[inline(always)]
+fn raw_transfer_request(req: Request<Body>) -> TransferRequest {
+    TransferRequest {
+        content_type: req.headers().get("content-type").cloned(),
+        content_length: req.headers().get("content-length").cloned(),
+        content_disposition: req.headers().get("content-disposition").cloned(),
+        body: req.into_body(),
+    }
+}
+
+async fn get_transfer_request(req: Request<Body>) -> Result<TransferRequest, std::io::Error> {
+    let content_type_option = req.headers().get("content-type");
+    if content_type_option.is_none() {
+        return Ok(raw_transfer_request(req));
+    }
+    let content_type = content_type_option.unwrap();
+    let mime_type_result: Result<mime::Mime, _> = match content_type.to_str() {
+        Ok(s) => s
+            .parse()
+            .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err)),
+        Err(err) => Err(std::io::Error::new(std::io::ErrorKind::Other, err)),
+    };
+    if mime_type_result.is_err() {
+        return Ok(raw_transfer_request(req));
+    }
+    let mime_type = mime_type_result.unwrap();
+    if mime_type.essence_str() != "multipart/form-data" {
+        return Ok(raw_transfer_request(req));
+    }
+    let boundary = mime_type
+        .get_param("boundary")
+        .map(|b| b.to_string())
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "boundary not found"))?;
+    let mut multipart_stream = mpart_async::server::MultipartStream::new(boundary, req.into_body());
+    while let Ok(Some(field)) = multipart_stream.try_next().await {
+        // NOTE: Only first one is transferred
+        let headers = field.headers().clone();
+        return Ok(TransferRequest {
+            content_type: headers.get("content-type").cloned(),
+            content_length: headers.get("content-length").cloned(),
+            content_disposition: headers.get("content-disposition").cloned(),
+            body: Body::wrap_stream(field),
+        });
+    }
+    return Err(std::io::Error::new(
+        std::io::ErrorKind::Other,
+        "multipart error",
+    ));
+}
+
+async fn transfer(
+    path: String,
+    data_sender: DataSender,
+    data_receiver: DataReceiver,
+) -> Result<(), std::io::Error> {
     log::info!("Transfer start: '{}'", path);
-
-    let data_sender_req = data_sender.req;
-
-    // Get sender's header
-    let sender_header = data_sender_req.headers();
-    // Get sender's header values
-    let sender_content_type = sender_header.get("content-type").cloned();
-    let sender_content_length = sender_header.get("content-length").cloned();
-    let sender_content_disposition = sender_header.get("content-disposition").cloned();
-
+    // Extract transfer headers and body even when request is multipart
+    let transfer_request = get_transfer_request(data_sender.req).await?;
     // The finish_waiter will tell when the body is finished
     let (finish_detectable_body, sender_req_body_finish_waiter) =
-        finish_detectable_stream(data_sender_req.into_body());
-
+        finish_detectable_stream(transfer_request.body);
     // Create receiver's body
     let receiver_res_body = Body::wrap_stream::<FinishDetectableStream<Body>, Bytes, hyper::Error>(
         finish_detectable_body,
     );
-
     // Create receiver's response
     let receiver_res = Response::builder()
-        .option_header("Content-Type", sender_content_type)
-        .option_header("Content-Length", sender_content_length)
-        .option_header("Content-Disposition", sender_content_disposition)
+        .option_header("Content-Type", transfer_request.content_type)
+        .option_header("Content-Length", transfer_request.content_length)
+        .option_header("Content-Disposition", transfer_request.content_disposition)
         .header("Access-Control-Allow-Origin", "*")
         .header(
             "Access-Control-Expose-Headers",
@@ -333,4 +388,5 @@ fn transfer(path: String, data_sender: DataSender, data_receiver: DataReceiver) 
             .boxed(),
         )
         .unwrap();
+    return Ok(());
 }
