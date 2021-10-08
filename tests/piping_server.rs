@@ -304,6 +304,37 @@ async fn f() -> Result<(), BoxError> {
     Ok(())
 }
 
+#[it("should reject POST and PUT with Content-Range")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
+
+    for method in [hyper::Method::POST, hyper::Method::PUT] {
+        let get_req = hyper::Request::builder()
+            .method(method)
+            .uri(uri.clone())
+            .header("Content-Range", "bytes 2-6/100")
+            .body(hyper::Body::from("hello"))?;
+        let client = Client::new();
+        let res = client.request(get_req).await?;
+        let (parts, _body) = res.into_parts();
+
+        assert_eq!(parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            parts
+                .headers
+                .get("access-control-allow-origin")
+                .unwrap()
+                .to_str()?,
+            "*"
+        );
+    }
+
+    serve.shutdown().await?;
+    Ok(())
+}
+
 #[it("should handle connection (sender: O, receiver: O)")]
 async fn f() -> Result<(), BoxError> {
     let serve: Serve = serve().await;

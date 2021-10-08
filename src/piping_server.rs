@@ -199,6 +199,22 @@ impl PipingServer {
                         res_sender.send(res).unwrap();
                         return;
                     }
+                    // Notify that Content-Range is not supported
+                    // In the future, resumable upload using Content-Range might be supported
+                    // ref: https://github.com/httpwg/http-core/pull/653
+                    if req.headers().contains_key("content-range") {
+                        // Reject reserved path sending
+                        let res = Response::builder()
+                            .status(400)
+                            .header("Access-Control-Allow-Origin", "*")
+                            .body(Body::from(format!(
+                                "[ERROR] Content-Range is not supported for now in {}\n",
+                                req.method()
+                            )))
+                            .unwrap();
+                        res_sender.send(res).unwrap();
+                        return;
+                    }
                     let sender_connected: bool = path_to_sender.read().unwrap().contains_key(path);
                     // If a sender has been connected already
                     if sender_connected {
