@@ -64,7 +64,7 @@ impl PipingServer {
         &self,
         req: Request<Body>,
         res_sender: oneshot::Sender<Response<Body>>,
-    ) -> impl std::future::Future<Output = ()> {
+    ) -> impl std::future::Future<Output = anyhow::Result<()>> {
         let path_to_sender = Arc::clone(&self.path_to_sender);
         let path_to_receiver = Arc::clone(&self.path_to_receiver);
         async move {
@@ -133,7 +133,7 @@ impl PipingServer {
                                         ))
                                         .unwrap();
                                     res_sender.send(res).unwrap();
-                                    return;
+                                    return Ok(());
                                 }
                             }
                             let receiver_connected: bool =
@@ -149,7 +149,7 @@ impl PipingServer {
                                     )))
                                     .unwrap();
                                 res_sender.send(res).unwrap();
-                                return;
+                                return Ok(());
                             }
                             let sender = path_to_sender.write().unwrap().remove(path);
                             match sender {
@@ -197,7 +197,7 @@ impl PipingServer {
                             )))
                             .unwrap();
                         res_sender.send(res).unwrap();
-                        return;
+                        return Ok(());
                     }
                     // Notify that Content-Range is not supported
                     // In the future, resumable upload using Content-Range might be supported
@@ -213,7 +213,7 @@ impl PipingServer {
                             )))
                             .unwrap();
                         res_sender.send(res).unwrap();
-                        return;
+                        return Ok(());
                     }
                     let sender_connected: bool = path_to_sender.read().unwrap().contains_key(path);
                     // If a sender has been connected already
@@ -227,7 +227,7 @@ impl PipingServer {
                             )))
                             .unwrap();
                         res_sender.send(res).unwrap();
-                        return;
+                        return Ok(());
                     }
 
                     let (tx, rx) = mpsc::unbounded::<
@@ -313,6 +313,7 @@ impl PipingServer {
                     res_sender.send(res).unwrap();
                 }
             }
+            Ok(())
         }
     }
 }
