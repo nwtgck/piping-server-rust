@@ -101,7 +101,34 @@ async fn f() -> Result<(), BoxError> {
 
     // Content-Type is "text/html"
     let content_type: &str = parts.headers.get("content-type").unwrap().to_str()?;
-    assert_eq!(content_type, "text/html");
+    assert_eq!(content_type, "text/html; charset=utf-8");
+
+    serve.shutdown().await?;
+    Ok(())
+}
+
+#[it("should return noscript page")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let uri = format!("http://{}/noscript?path=mypath", serve.addr).parse::<http::Uri>()?;
+
+    let get_req = hyper::Request::builder()
+        .method(hyper::Method::GET)
+        .uri(uri.clone())
+        .body(hyper::Body::empty())?;
+    let client = Client::new();
+    let res = client.request(get_req).await?;
+
+    let (parts, body) = res.into_parts();
+
+    // Body should contains "Piping"
+    let body_string = String::from_utf8(read_all_body(body).await)?;
+    assert!(body_string.contains("action=\"mypath\""));
+
+    // Content-Type is "text/html"
+    let content_type: &str = parts.headers.get("content-type").unwrap().to_str()?;
+    assert_eq!(content_type, "text/html; charset=utf-8");
 
     serve.shutdown().await?;
     Ok(())

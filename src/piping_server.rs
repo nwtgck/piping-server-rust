@@ -6,21 +6,26 @@ use futures::stream::{Stream, StreamExt, TryStreamExt};
 use http::{Method, Request, Response};
 use hyper::body::Bytes;
 use hyper::Body;
+use serde_urlencoded;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
+use crate::dynamic_resources;
 use crate::util::{
     finish_detectable_stream, one_stream, FinishDetectableStream, OptionHeaderBuilder,
 };
 
-mod reserved_paths {
+pub mod reserved_paths {
     crate::with_values! {
         pub const INDEX: &'static str = "/";
+        pub const NO_SCRIPT: &'static str = "/noscript";
         pub const VERSION: &'static str = "/version";
         pub const FAVICON_ICO: &'static str = "/favicon.ico";
         pub const ROBOTS_TXT: &'static str = "/robots.txt";
     }
 }
+
+pub const NO_SCRIPT_PATH_QUERY_PARAMETER_NAME: &str = "path";
 
 struct DataSender {
     req: Request<Body>,
@@ -65,16 +70,36 @@ impl PipingServer {
         async move {
             let path = req.uri().path();
 
-            log::info!("{} {:} {:?}", req.method(), req.uri().path(), req.version());
+            log::info!("{} {:} {:?}", req.method(), req.uri(), req.version());
             match req.method() {
                 &Method::GET => {
                     match path {
                         reserved_paths::INDEX => {
                             let res = Response::builder()
                                 .status(200)
-                                .header("Content-Type", "text/html")
+                                .header("Content-Type", "text/html; charset=utf-8")
                                 .header("Access-Control-Allow-Origin", "*")
                                 .body(Body::from(include_str!("../resource/index.html")))
+                                .unwrap();
+                            res_sender.send(res).unwrap();
+                        }
+                        reserved_paths::NO_SCRIPT => {
+                            let path = match req.uri().query() {
+                                Some(query) => {
+                                    serde_urlencoded::from_str::<HashMap<String, String>>(query)
+                                        .unwrap_or_else(|_| HashMap::new())
+                                        .get(NO_SCRIPT_PATH_QUERY_PARAMETER_NAME)
+                                        .map(|s| s.to_string())
+                                        .unwrap_or_else(|| "".to_string())
+                                }
+                                None => String::new(),
+                            };
+                            let html = dynamic_resources::no_script_html(&path);
+                            let res = Response::builder()
+                                .status(200)
+                                .header("Content-Type", "text/html; charset=utf-8")
+                                .header("Access-Control-Allow-Origin", "*")
+                                .body(Body::from(html))
                                 .unwrap();
                             res_sender.send(res).unwrap();
                         }
