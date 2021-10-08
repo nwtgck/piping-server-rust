@@ -399,6 +399,7 @@ async fn transfer(
             "Access-Control-Expose-Headers",
             "Content-Length, Content-Type",
         )
+        .header("X-Robots-Tag", "none")
         .body(receiver_res_body)
         .unwrap();
     // Return response to receiver

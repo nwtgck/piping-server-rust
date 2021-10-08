@@ -11,6 +11,13 @@ use std::net::SocketAddr;
 
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
+fn get_header_value<'a>(
+    headers: &'a hyper::header::HeaderMap,
+    key: &'static str,
+) -> Option<&'a str> {
+    headers.get(key).map(|v| v.to_str().unwrap())
+}
+
 // Read all bytes from body
 async fn read_all_body(mut body: hyper::body::Body) -> Vec<u8> {
     use futures::stream::StreamExt;
@@ -100,8 +107,10 @@ async fn f() -> Result<(), BoxError> {
     assert!(body_string.contains("Piping"));
 
     // Content-Type is "text/html"
-    let content_type: &str = parts.headers.get("content-type").unwrap().to_str()?;
-    assert_eq!(content_type, "text/html; charset=utf-8");
+    assert_eq!(
+        get_header_value(&parts.headers, "content-type"),
+        Some("text/html; charset=utf-8")
+    );
 
     serve.shutdown().await?;
     Ok(())
@@ -127,8 +136,10 @@ async fn f() -> Result<(), BoxError> {
     assert!(body_string.contains("action=\"mypath\""));
 
     // Content-Type is "text/html"
-    let content_type: &str = parts.headers.get("content-type").unwrap().to_str()?;
-    assert_eq!(content_type, "text/html; charset=utf-8");
+    assert_eq!(
+        get_header_value(&parts.headers, "content-type"),
+        Some("text/html; charset=utf-8")
+    );
 
     serve.shutdown().await?;
     Ok(())
@@ -153,14 +164,14 @@ async fn f() -> Result<(), BoxError> {
     let body_string = String::from_utf8(read_all_body(body).await)?;
     assert!(body_string.contains(env!("CARGO_PKG_VERSION")));
 
-    let content_type: &str = parts.headers.get("content-type").unwrap().to_str()?;
-    assert_eq!(content_type, "text/plain");
-    let access_control_allow_origin: &str = parts
-        .headers
-        .get("access-control-allow-origin")
-        .unwrap()
-        .to_str()?;
-    assert_eq!(access_control_allow_origin, "*");
+    assert_eq!(
+        get_header_value(&parts.headers, "content-type"),
+        Some("text/plain")
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-allow-origin"),
+        Some("*")
+    );
 
     serve.shutdown().await?;
     Ok(())
@@ -211,8 +222,7 @@ async fn f() -> Result<(), BoxError> {
     let body_len: usize = read_all_body(body).await.len();
     assert_eq!(body_len, 0);
 
-    let status: http::StatusCode = parts.status;
-    assert_eq!(status, http::StatusCode::NOT_FOUND);
+    assert_eq!(parts.status, http::StatusCode::NOT_FOUND);
 
     serve.shutdown().await?;
     Ok(())
@@ -233,41 +243,25 @@ async fn f() -> Result<(), BoxError> {
 
     let (parts, _body) = res.into_parts();
 
-    let status: http::StatusCode = parts.status;
-    assert_eq!(status, http::StatusCode::OK);
+    assert_eq!(parts.status, http::StatusCode::OK);
 
     assert_eq!(
-        parts
-            .headers
-            .get("access-control-allow-origin")
-            .unwrap()
-            .to_str()?,
-        "*"
+        get_header_value(&parts.headers, "access-control-allow-origin"),
+        Some("*")
     );
     assert_eq!(
-        parts
-            .headers
-            .get("access-control-allow-methods")
-            .unwrap()
-            .to_str()?,
-        "GET, HEAD, POST, PUT, OPTIONS"
+        get_header_value(&parts.headers, "access-control-allow-methods"),
+        Some("GET, HEAD, POST, PUT, OPTIONS")
     );
     assert_eq!(
-        parts
-            .headers
-            .get("access-control-allow-headers")
+        get_header_value(&parts.headers, "access-control-allow-headers")
             .unwrap()
-            .to_str()?
             .to_lowercase(),
         "content-type, content-disposition".to_owned()
     );
     assert_eq!(
-        parts
-            .headers
-            .get("access-control-max-age")
-            .unwrap()
-            .to_str()?,
-        "86400"
+        get_header_value(&parts.headers, "access-control-max-age"),
+        Some("86400")
     );
 
     serve.shutdown().await?;
@@ -292,12 +286,8 @@ async fn f() -> Result<(), BoxError> {
 
     assert_eq!(parts.status, http::StatusCode::BAD_REQUEST);
     assert_eq!(
-        parts
-            .headers
-            .get("access-control-allow-origin")
-            .unwrap()
-            .to_str()?,
-        "*"
+        get_header_value(&parts.headers, "access-control-allow-origin"),
+        Some("*")
     );
 
     serve.shutdown().await?;
@@ -322,12 +312,8 @@ async fn f() -> Result<(), BoxError> {
 
         assert_eq!(parts.status, http::StatusCode::BAD_REQUEST);
         assert_eq!(
-            parts
-                .headers
-                .get("access-control-allow-origin")
-                .unwrap()
-                .to_str()?,
-            "*"
+            get_header_value(&parts.headers, "access-control-allow-origin"),
+            Some("*")
         );
     }
 
@@ -357,13 +343,30 @@ async fn f() -> Result<(), BoxError> {
         .uri(uri.clone())
         .body(hyper::Body::empty())?;
     let client = Client::new();
-    let res = client.request(get_req).await?;
+    let (parts, body) = client.request(get_req).await?.into_parts();
 
-    let body = res.into_body();
     let all_bytes: Vec<u8> = read_all_body(body).await;
 
     let expect = send_str_body.to_owned().into_bytes();
     assert_eq!(all_bytes, expect);
+
+    assert_eq!(get_header_value(&parts.headers, "content-type"), None);
+    assert_eq!(
+        get_header_value(&parts.headers, "content-length"),
+        Some(send_str_body.len().to_string().as_str())
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "content-disposition"),
+        None
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-allow-origin"),
+        Some("*")
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "x-robots-tag"),
+        Some("none")
+    );
 
     serve.shutdown_tx.send(()).expect("shutdown failed");
     Ok(())
