@@ -12,7 +12,8 @@ use std::sync::{Arc, RwLock};
 
 use crate::dynamic_resources;
 use crate::util::{
-    finish_detectable_stream, one_stream, FinishDetectableStream, OptionHeaderBuilder,
+    finish_detectable_stream, make_io_error, one_stream, FinishDetectableStream,
+    OptionHeaderBuilder,
 };
 
 pub mod reserved_paths {
@@ -79,8 +80,7 @@ impl PipingServer {
                                 .status(200)
                                 .header("Content-Type", "text/html; charset=utf-8")
                                 .header("Access-Control-Allow-Origin", "*")
-                                .body(Body::from(include_str!("../resource/index.html")))
-                                .unwrap();
+                                .body(Body::from(include_str!("../resource/index.html")))?;
                             res_sender.send(res).unwrap();
                         }
                         reserved_paths::NO_SCRIPT => {
@@ -99,8 +99,7 @@ impl PipingServer {
                                 .status(200)
                                 .header("Content-Type", "text/html; charset=utf-8")
                                 .header("Access-Control-Allow-Origin", "*")
-                                .body(Body::from(html))
-                                .unwrap();
+                                .body(Body::from(html))?;
                             res_sender.send(res).unwrap();
                         }
                         reserved_paths::VERSION => {
@@ -109,16 +108,15 @@ impl PipingServer {
                                 .status(200)
                                 .header("Content-Type", "text/plain")
                                 .header("Access-Control-Allow-Origin", "*")
-                                .body(Body::from(format!("{} in Rust (Hyper)\n", version)))
-                                .unwrap();
+                                .body(Body::from(format!("{} in Rust (Hyper)\n", version)))?;
                             res_sender.send(res).unwrap();
                         }
                         reserved_paths::FAVICON_ICO => {
-                            let res = Response::builder().status(204).body(Body::empty()).unwrap();
+                            let res = Response::builder().status(204).body(Body::empty())?;
                             res_sender.send(res).unwrap();
                         }
                         reserved_paths::ROBOTS_TXT => {
-                            let res = Response::builder().status(404).body(Body::empty()).unwrap();
+                            let res = Response::builder().status(404).body(Body::empty())?;
                             res_sender.send(res).unwrap();
                         }
                         _ => {
@@ -130,8 +128,7 @@ impl PipingServer {
                                         .header("Access-Control-Allow-Origin", "*")
                                         .body(Body::from(
                                             "[ERROR] Service Worker registration is rejected.\n",
-                                        ))
-                                        .unwrap();
+                                        ))?;
                                     res_sender.send(res).unwrap();
                                     return Ok(());
                                 }
@@ -146,8 +143,7 @@ impl PipingServer {
                                     .body(Body::from(format!(
                                         "[ERROR] Another receiver has been connected on '{}'.\n",
                                         path
-                                    )))
-                                    .unwrap();
+                                    )))?;
                                 res_sender.send(res).unwrap();
                                 return Ok(());
                             }
@@ -171,14 +167,13 @@ impl PipingServer {
                                         data_sender,
                                         DataReceiver { res_sender },
                                     )
-                                    .await
-                                    .unwrap();
+                                    .await?;
                                 }
                                 // If sender is not found
                                 None => {
                                     path_to_receiver
                                         .write()
-                                        .unwrap()
+                                        .map_err(|e| make_io_error(format!("{:?}", e)))?
                                         .insert(path.to_string(), DataReceiver { res_sender });
                                 }
                             }
@@ -194,8 +189,7 @@ impl PipingServer {
                             .body(Body::from(format!(
                                 "[ERROR] Cannot send to the reserved path '{}'. (e.g. '/mypath123')\n",
                                 path
-                            )))
-                            .unwrap();
+                            )))?;
                         res_sender.send(res).unwrap();
                         return Ok(());
                     }
@@ -210,8 +204,7 @@ impl PipingServer {
                             .body(Body::from(format!(
                                 "[ERROR] Content-Range is not supported for now in {}\n",
                                 req.method()
-                            )))
-                            .unwrap();
+                            )))?;
                         res_sender.send(res).unwrap();
                         return Ok(());
                     }
@@ -224,8 +217,7 @@ impl PipingServer {
                             .body(Body::from(format!(
                                 "[ERROR] Another sender has been connected on '{}'.\n",
                                 path
-                            )))
-                            .unwrap();
+                            )))?;
                         res_sender.send(res).unwrap();
                         return Ok(());
                     }
@@ -296,8 +288,7 @@ impl PipingServer {
                         )
                         .header("Access-Control-Max-Age", 86400)
                         .header("Content-Length", 0)
-                        .body(Body::empty())
-                        .unwrap();
+                        .body(Body::empty())?;
                     res_sender.send(res).unwrap();
                 }
                 _ => {
@@ -308,8 +299,7 @@ impl PipingServer {
                         .body(Body::from(format!(
                             "[ERROR] Unsupported method: {}.\n",
                             req.method()
-                        )))
-                        .unwrap();
+                        )))?;
                     res_sender.send(res).unwrap();
                 }
             }
