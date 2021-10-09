@@ -12,7 +12,8 @@ use std::sync::{Arc, RwLock};
 
 use crate::dynamic_resources;
 use crate::util::{
-    finish_detectable_stream, one_stream, FinishDetectableStream, OptionHeaderBuilder,
+    finish_detectable_stream, one_stream, FinishDetectableStream, HeaderValuesBuilder,
+    OptionHeaderBuilder,
 };
 
 pub mod reserved_paths {
@@ -325,19 +326,22 @@ struct TransferRequest {
 }
 
 #[inline(always)]
-fn raw_transfer_request(req: Request<Body>) -> TransferRequest {
+fn raw_transfer_request(parts: &http::request::Parts, body: Body) -> TransferRequest {
     TransferRequest {
-        content_type: req.headers().get("content-type").cloned(),
-        content_length: req.headers().get("content-length").cloned(),
-        content_disposition: req.headers().get("content-disposition").cloned(),
-        body: req.into_body(),
+        content_type: parts.headers.get("content-type").cloned(),
+        content_length: parts.headers.get("content-length").cloned(),
+        content_disposition: parts.headers.get("content-disposition").cloned(),
+        body,
     }
 }
 
-async fn get_transfer_request(req: Request<Body>) -> Result<TransferRequest, std::io::Error> {
-    let content_type_option = req.headers().get("content-type");
+async fn get_transfer_request(
+    parts: &http::request::Parts,
+    body: Body,
+) -> Result<TransferRequest, std::io::Error> {
+    let content_type_option = parts.headers.get("content-type");
     if content_type_option.is_none() {
-        return Ok(raw_transfer_request(req));
+        return Ok(raw_transfer_request(parts, body));
     }
     let content_type = content_type_option.unwrap();
     let mime_type_result: Result<mime::Mime, _> = match content_type.to_str() {
@@ -347,17 +351,17 @@ async fn get_transfer_request(req: Request<Body>) -> Result<TransferRequest, std
         Err(err) => Err(std::io::Error::new(std::io::ErrorKind::Other, err)),
     };
     if mime_type_result.is_err() {
-        return Ok(raw_transfer_request(req));
+        return Ok(raw_transfer_request(parts, body));
     }
     let mime_type = mime_type_result.unwrap();
     if mime_type.essence_str() != "multipart/form-data" {
-        return Ok(raw_transfer_request(req));
+        return Ok(raw_transfer_request(parts, body));
     }
     let boundary = mime_type
         .get_param("boundary")
         .map(|b| b.to_string())
         .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "boundary not found"))?;
-    let mut multipart_stream = mpart_async::server::MultipartStream::new(boundary, req.into_body());
+    let mut multipart_stream = mpart_async::server::MultipartStream::new(boundary, body);
     while let Ok(Some(field)) = multipart_stream.try_next().await {
         // NOTE: Only first one is transferred
         let headers = field.headers().clone();
@@ -379,9 +383,10 @@ async fn transfer(
     data_sender: DataSender,
     data_receiver: DataReceiver,
 ) -> Result<(), std::io::Error> {
+    let (data_sender_parts, data_sender_body) = data_sender.req.into_parts();
     log::info!("Transfer start: '{}'", path);
     // Extract transfer headers and body even when request is multipart
-    let transfer_request = get_transfer_request(data_sender.req).await?;
+    let transfer_request = get_transfer_request(&data_sender_parts, data_sender_body).await?;
     // The finish_waiter will tell when the body is finished
     let (finish_detectable_body, sender_req_body_finish_waiter) =
         finish_detectable_stream(transfer_request.body);
@@ -389,11 +394,13 @@ async fn transfer(
     let receiver_res_body = Body::wrap_stream::<FinishDetectableStream<Body>, Bytes, hyper::Error>(
         finish_detectable_body,
     );
+    let x_piping = data_sender_parts.headers.get_all("x-piping");
     // Create receiver's response
     let receiver_res = Response::builder()
         .option_header("Content-Type", transfer_request.content_type)
         .option_header("Content-Length", transfer_request.content_length)
         .option_header("Content-Disposition", transfer_request.content_disposition)
+        .header_values("X-Piping", x_piping.into_iter().map(|x| x.clone()))
         .header("Access-Control-Allow-Origin", "*")
         .header(
             "Access-Control-Expose-Headers",
