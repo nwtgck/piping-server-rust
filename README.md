@@ -51,7 +51,13 @@ Click the button bellow to deploy.
 
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
-### Way 5: Build and run by yourself
+### Way5: Replit
+
+Click <kbd>Fork</kbd> button in the like below and fork it.
+
+<https://replit.com/@nwtgck/piping-rust>
+
+### Way 6: Build and run by yourself
 You can clone, build and run `piping-server` as follows.
 
 ```bash
