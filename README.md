@@ -53,7 +53,7 @@ Click the button bellow to deploy.
 
 ### Way5: Replit
 
-Click <kbd>Fork</kbd> button in the like below and fork it.
+Click <kbd>Fork</kbd> button in the link below and fork it.
 
 <https://replit.com/@nwtgck/piping-rust>
 
