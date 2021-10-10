@@ -293,7 +293,7 @@ impl PipingServer {
                         )
                         .header(
                             "Access-Control-Allow-Headers",
-                            "Content-Type, Content-Disposition",
+                            "Content-Type, Content-Disposition, X-Piping",
                         )
                         .header("Access-Control-Max-Age", 86400)
                         .header("Content-Length", 0)
@@ -395,6 +395,7 @@ async fn transfer(
         finish_detectable_body,
     );
     let x_piping = data_sender_parts.headers.get_all("x-piping");
+    let has_x_piping = data_sender_parts.headers.contains_key("x-piping");
     // Create receiver's response
     let receiver_res = Response::builder()
         .option_header("Content-Type", transfer_request.content_type)
@@ -402,9 +403,9 @@ async fn transfer(
         .option_header("Content-Disposition", transfer_request.content_disposition)
         .header_values("X-Piping", x_piping.into_iter().map(|x| x.clone()))
         .header("Access-Control-Allow-Origin", "*")
-        .header(
+        .option_header(
             "Access-Control-Expose-Headers",
-            "Content-Length, Content-Type",
+            if has_x_piping { Some("X-Piping") } else { None },
         )
         .header("X-Robots-Tag", "none")
         .body(receiver_res_body)
