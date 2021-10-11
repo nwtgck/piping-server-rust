@@ -257,7 +257,7 @@ async fn f() -> Result<(), BoxError> {
         get_header_value(&parts.headers, "access-control-allow-headers")
             .unwrap()
             .to_lowercase(),
-        "content-type, content-disposition".to_owned()
+        "content-type, content-disposition, x-piping".to_owned()
     );
     assert_eq!(
         get_header_value(&parts.headers, "access-control-max-age"),
@@ -330,6 +330,7 @@ async fn f() -> Result<(), BoxError> {
     let send_str_body = "this is a content";
     let send_req = hyper::Request::builder()
         .method(hyper::Method::POST)
+        .header("Content-Type", "text/plain")
         .uri(uri.clone())
         .body(hyper::Body::from(send_str_body))?;
 
@@ -350,7 +351,10 @@ async fn f() -> Result<(), BoxError> {
     let expect = send_str_body.to_owned().into_bytes();
     assert_eq!(all_bytes, expect);
 
-    assert_eq!(get_header_value(&parts.headers, "content-type"), None);
+    assert_eq!(
+        get_header_value(&parts.headers, "content-type"),
+        Some("text/plain")
+    );
     assert_eq!(
         get_header_value(&parts.headers, "content-length"),
         Some(send_str_body.len().to_string().as_str())
@@ -366,6 +370,10 @@ async fn f() -> Result<(), BoxError> {
     assert_eq!(
         get_header_value(&parts.headers, "x-robots-tag"),
         Some("none")
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-expose-headers"),
+        None,
     );
 
     serve.shutdown_tx.send(()).expect("shutdown failed");
@@ -396,6 +404,7 @@ async fn f() -> Result<(), BoxError> {
     let send_str_body = "this is a content";
     let send_req = hyper::Request::builder()
         .method(hyper::Method::POST)
+        .header("Content-Type", "text/plain")
         .uri(uri.clone())
         .body(hyper::Body::from(send_str_body))?;
 
@@ -403,10 +412,149 @@ async fn f() -> Result<(), BoxError> {
     let send_res = client.request(send_req).await?;
     assert_eq!(send_res.status(), http::StatusCode::OK);
 
-    let body = get_res_rx.await?.into_body();
+    let (parts, body) = get_res_rx.await?.into_parts();
     let all_bytes: Vec<u8> = read_all_body(body).await;
     let expect = send_str_body.to_owned().into_bytes();
     assert_eq!(all_bytes, expect);
+
+    assert_eq!(
+        get_header_value(&parts.headers, "content-type"),
+        Some("text/plain")
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "content-length"),
+        Some(send_str_body.len().to_string().as_str())
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "content-disposition"),
+        None
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-allow-origin"),
+        Some("*")
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "x-robots-tag"),
+        Some("none")
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-expose-headers"),
+        None,
+    );
+
+    serve.shutdown_tx.send(()).expect("shutdown failed");
+    Ok(())
+}
+
+#[it("should pass X-Piping and attach Access-Control-Expose-Headers: X-Piping when sending with X-Piping")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
+
+    let send_str_body = "this is a content";
+    let send_req = hyper::Request::builder()
+        .method(hyper::Method::POST)
+        .header("Content-Type", "text/plain")
+        .header("X-Piping", "mymetadata")
+        .uri(uri.clone())
+        .body(hyper::Body::from(send_str_body))?;
+
+    let client = Client::new();
+    let send_res = client.request(send_req).await?;
+    let (send_res_parts, _send_res_body) = send_res.into_parts();
+    assert_eq!(send_res_parts.status, http::StatusCode::OK);
+
+    let get_req = hyper::Request::builder()
+        .method(hyper::Method::GET)
+        .uri(uri.clone())
+        .body(hyper::Body::empty())?;
+    let client = Client::new();
+    let (parts, body) = client.request(get_req).await?.into_parts();
+
+    let all_bytes: Vec<u8> = read_all_body(body).await;
+
+    let expect = send_str_body.to_owned().into_bytes();
+    assert_eq!(all_bytes, expect);
+
+    assert_eq!(
+        get_header_value(&parts.headers, "content-type"),
+        Some("text/plain")
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "content-length"),
+        Some(send_str_body.len().to_string().as_str())
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "content-disposition"),
+        None
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-allow-origin"),
+        Some("*")
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "x-robots-tag"),
+        Some("none")
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-expose-headers"),
+        Some("X-Piping"),
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "X-Piping"),
+        Some("mymetadata"),
+    );
+
+    serve.shutdown_tx.send(()).expect("shutdown failed");
+    Ok(())
+}
+
+#[it("should pass multiple X-Piping")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
+
+    let send_str_body = "this is a content";
+    let send_req = hyper::Request::builder()
+        .method(hyper::Method::POST)
+        .header("Content-Type", "text/plain")
+        .header("X-Piping", "mymetadata1")
+        .header("X-Piping", "mymetadata2")
+        .header("X-Piping", "mymetadata3")
+        .uri(uri.clone())
+        .body(hyper::Body::from(send_str_body))?;
+
+    let client = Client::new();
+    let send_res = client.request(send_req).await?;
+    let (send_res_parts, _send_res_body) = send_res.into_parts();
+    assert_eq!(send_res_parts.status, http::StatusCode::OK);
+
+    let get_req = hyper::Request::builder()
+        .method(hyper::Method::GET)
+        .uri(uri.clone())
+        .body(hyper::Body::empty())?;
+    let client = Client::new();
+    let (parts, body) = client.request(get_req).await?.into_parts();
+
+    let all_bytes: Vec<u8> = read_all_body(body).await;
+
+    let expect = send_str_body.to_owned().into_bytes();
+    assert_eq!(all_bytes, expect);
+
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-expose-headers"),
+        Some("X-Piping"),
+    );
+    assert_eq!(
+        parts
+            .headers
+            .get_all("X-Piping")
+            .into_iter()
+            .collect::<Vec<_>>(),
+        vec!["mymetadata1", "mymetadata2", "mymetadata3"],
+    );
 
     serve.shutdown_tx.send(()).expect("shutdown failed");
     Ok(())
