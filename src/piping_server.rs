@@ -308,7 +308,7 @@ impl PipingServer {
                 _ => {
                     log::info!("Unsupported method: {}", req.method());
                     let res = Response::builder()
-                        .status(400)
+                        .status(405)
                         .header("Access-Control-Allow-Origin", "*")
                         .body(Body::from(format!(
                             "[ERROR] Unsupported method: {}.\n",
