@@ -228,6 +228,38 @@ async fn f() -> Result<(), BoxError> {
     Ok(())
 }
 
+#[it("should return a HEAD response with the same headers as GET response in the reserved paths")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let client = Client::new();
+    for reserved_path in piping_server::piping_server::reserved_paths::VALUES {
+        let uri = format!("http://{}{}", serve.addr, reserved_path).parse::<http::Uri>()?;
+
+        let get_req = hyper::Request::builder()
+            .method(hyper::Method::GET)
+            .uri(uri.clone())
+            .body(hyper::Body::empty())?;
+        let get_res = client.request(get_req).await?;
+        let (mut get_parts, _) = get_res.into_parts();
+        get_parts.headers.remove("date");
+
+        let head_req = hyper::Request::builder()
+            .method(hyper::Method::HEAD)
+            .uri(uri.clone())
+            .body(hyper::Body::empty())?;
+        let head_res = client.request(head_req).await?;
+        let (mut head_parts, _) = head_res.into_parts();
+        head_parts.headers.remove("date");
+
+        assert_eq!(head_parts.status, get_parts.status);
+        assert_eq!(head_parts.headers, get_parts.headers);
+    }
+
+    serve.shutdown().await?;
+    Ok(())
+}
+
 #[it("should support preflight request")]
 async fn f() -> Result<(), BoxError> {
     let serve: Serve = serve().await;
