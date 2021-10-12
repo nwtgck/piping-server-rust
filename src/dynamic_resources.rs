@@ -10,8 +10,7 @@ fn escape_html_attribute(s: &str) -> String {
 }
 
 pub fn no_script_html(path: &String) -> String {
-    let escaped_path = escape_html_attribute(path);
-    let disabled = if path.is_empty() { "disabled" } else { "" };
+    // language=html
     return std::format!(
         r#"<!DOCTYPE html>
 <html lang="en">
@@ -27,16 +26,16 @@ pub fn no_script_html(path: &String) -> String {
 </head>
 <body>
   <h2>File transfer without JavaScript</h2>
-  <form method="GET" action="{}">
+  <form method="GET" action="{no_script_path}">
     <h3>Step 1: Specify path</h3>
-    <input name="{}" value="{}">
+    <input name="{path_query}" value="{escaped_path}">
     <input type="submit" value="Apply">
   </form>
-  <form method="POST" action="{}" enctype="multipart/form-data">
+  <form method="POST" action="{escaped_path}" enctype="multipart/form-data">
     <h3>Step 2: Choose a file</h3>
-    <input type="file" name="input_file" {}>
+    <input type="file" name="input_file" {disabled}>
     <h3>Step 3: Send</h3>
-    <input type="submit" value="Send" {}>
+    <input type="submit" value="Send" {disabled}>
   </form>
   <hr>
   Piping Server:
@@ -46,11 +45,9 @@ pub fn no_script_html(path: &String) -> String {
 </body>
 </html>
 "#,
-        piping_server::reserved_paths::NO_SCRIPT,
-        piping_server::NO_SCRIPT_PATH_QUERY_PARAMETER_NAME,
-        escaped_path,
-        escaped_path,
-        disabled,
-        disabled
+        no_script_path = piping_server::reserved_paths::NO_SCRIPT,
+        path_query = piping_server::NO_SCRIPT_PATH_QUERY_PARAMETER_NAME,
+        escaped_path = escape_html_attribute(path),
+        disabled = if path.is_empty() { "disabled" } else { "" },
     );
 }
