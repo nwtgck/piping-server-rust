@@ -72,117 +72,121 @@ impl PipingServer {
             let path = req.uri().path();
 
             log::info!("{} {:} {:?}", req.method(), req.uri(), req.version());
+
+            if req.method() == &Method::GET || req.method() == &Method::HEAD {
+                match path {
+                    reserved_paths::INDEX => {
+                        let res = Response::builder()
+                            .status(200)
+                            .header("Content-Type", "text/html; charset=utf-8")
+                            .header("Access-Control-Allow-Origin", "*")
+                            .body(Body::from(include_str!("../resource/index.html")))
+                            .unwrap();
+                        res_sender.send(res).unwrap();
+                        return;
+                    }
+                    reserved_paths::NO_SCRIPT => {
+                        let path = match req.uri().query() {
+                            Some(query) => {
+                                serde_urlencoded::from_str::<HashMap<String, String>>(query)
+                                    .unwrap_or_else(|_| HashMap::new())
+                                    .get(NO_SCRIPT_PATH_QUERY_PARAMETER_NAME)
+                                    .map(|s| s.to_string())
+                                    .unwrap_or_else(|| "".to_string())
+                            }
+                            None => String::new(),
+                        };
+                        let html = dynamic_resources::no_script_html(&path);
+                        let res = Response::builder()
+                            .status(200)
+                            .header("Content-Type", "text/html; charset=utf-8")
+                            .header("Access-Control-Allow-Origin", "*")
+                            .body(Body::from(html))
+                            .unwrap();
+                        res_sender.send(res).unwrap();
+                        return;
+                    }
+                    reserved_paths::VERSION => {
+                        let version: &'static str = env!("CARGO_PKG_VERSION");
+                        let res = Response::builder()
+                            .status(200)
+                            .header("Content-Type", "text/plain")
+                            .header("Access-Control-Allow-Origin", "*")
+                            .body(Body::from(format!("{} in Rust (Hyper)\n", version)))
+                            .unwrap();
+                        res_sender.send(res).unwrap();
+                        return;
+                    }
+                    reserved_paths::FAVICON_ICO => {
+                        let res = Response::builder().status(204).body(Body::empty()).unwrap();
+                        res_sender.send(res).unwrap();
+                        return;
+                    }
+                    reserved_paths::ROBOTS_TXT => {
+                        let res = Response::builder().status(404).body(Body::empty()).unwrap();
+                        res_sender.send(res).unwrap();
+                        return;
+                    }
+                    _ => {}
+                }
+            }
+
             match req.method() {
                 &Method::GET => {
-                    match path {
-                        reserved_paths::INDEX => {
+                    if let Some(value) = req.headers().get("service-worker") {
+                        if value == http::HeaderValue::from_static("script") {
+                            // Reject Service Worker registration
                             let res = Response::builder()
-                                .status(200)
-                                .header("Content-Type", "text/html; charset=utf-8")
+                                .status(400)
                                 .header("Access-Control-Allow-Origin", "*")
-                                .body(Body::from(include_str!("../resource/index.html")))
+                                .body(Body::from(
+                                    "[ERROR] Service Worker registration is rejected.\n",
+                                ))
                                 .unwrap();
                             res_sender.send(res).unwrap();
+                            return;
                         }
-                        reserved_paths::NO_SCRIPT => {
-                            let path = match req.uri().query() {
-                                Some(query) => {
-                                    serde_urlencoded::from_str::<HashMap<String, String>>(query)
-                                        .unwrap_or_else(|_| HashMap::new())
-                                        .get(NO_SCRIPT_PATH_QUERY_PARAMETER_NAME)
-                                        .map(|s| s.to_string())
-                                        .unwrap_or_else(|| "".to_string())
-                                }
-                                None => String::new(),
-                            };
-                            let html = dynamic_resources::no_script_html(&path);
-                            let res = Response::builder()
-                                .status(200)
-                                .header("Content-Type", "text/html; charset=utf-8")
-                                .header("Access-Control-Allow-Origin", "*")
-                                .body(Body::from(html))
-                                .unwrap();
-                            res_sender.send(res).unwrap();
-                        }
-                        reserved_paths::VERSION => {
-                            let version: &'static str = env!("CARGO_PKG_VERSION");
-                            let res = Response::builder()
-                                .status(200)
-                                .header("Content-Type", "text/plain")
-                                .header("Access-Control-Allow-Origin", "*")
-                                .body(Body::from(format!("{} in Rust (Hyper)\n", version)))
-                                .unwrap();
-                            res_sender.send(res).unwrap();
-                        }
-                        reserved_paths::FAVICON_ICO => {
-                            let res = Response::builder().status(204).body(Body::empty()).unwrap();
-                            res_sender.send(res).unwrap();
-                        }
-                        reserved_paths::ROBOTS_TXT => {
-                            let res = Response::builder().status(404).body(Body::empty()).unwrap();
-                            res_sender.send(res).unwrap();
-                        }
-                        _ => {
-                            if let Some(value) = req.headers().get("service-worker") {
-                                if value == http::HeaderValue::from_static("script") {
-                                    // Reject Service Worker registration
-                                    let res = Response::builder()
-                                        .status(400)
-                                        .header("Access-Control-Allow-Origin", "*")
-                                        .body(Body::from(
-                                            "[ERROR] Service Worker registration is rejected.\n",
-                                        ))
-                                        .unwrap();
-                                    res_sender.send(res).unwrap();
-                                    return;
-                                }
-                            }
-                            let receiver_connected: bool =
-                                path_to_receiver.read().unwrap().contains_key(path);
-                            // If a receiver has been connected already
-                            if receiver_connected {
-                                let res = Response::builder()
-                                    .status(400)
-                                    .header("Access-Control-Allow-Origin", "*")
-                                    .body(Body::from(format!(
-                                        "[ERROR] Another receiver has been connected on '{}'.\n",
-                                        path
+                    }
+                    let receiver_connected: bool =
+                        path_to_receiver.read().unwrap().contains_key(path);
+                    // If a receiver has been connected already
+                    if receiver_connected {
+                        let res = Response::builder()
+                            .status(400)
+                            .header("Access-Control-Allow-Origin", "*")
+                            .body(Body::from(format!(
+                                "[ERROR] Another receiver has been connected on '{}'.\n",
+                                path
+                            )))
+                            .unwrap();
+                        res_sender.send(res).unwrap();
+                        return;
+                    }
+                    let sender = path_to_sender.write().unwrap().remove(path);
+                    match sender {
+                        // If sender is found
+                        Some(data_sender) => {
+                            data_sender
+                                .res_body_streams_sender
+                                .write()
+                                .unwrap()
+                                .unbounded_send(
+                                    one_stream(Ok(Bytes::from(
+                                        "[INFO] A receiver was connected.\n",
                                     )))
-                                    .unwrap();
-                                res_sender.send(res).unwrap();
-                                return;
-                            }
-                            let sender = path_to_sender.write().unwrap().remove(path);
-                            match sender {
-                                // If sender is found
-                                Some(data_sender) => {
-                                    data_sender
-                                        .res_body_streams_sender
-                                        .write()
-                                        .unwrap()
-                                        .unbounded_send(
-                                            one_stream(Ok(Bytes::from(
-                                                "[INFO] A receiver was connected.\n",
-                                            )))
-                                            .boxed(),
-                                        )
-                                        .unwrap();
-                                    transfer(
-                                        path.to_string(),
-                                        data_sender,
-                                        DataReceiver { res_sender },
-                                    )
-                                    .await
-                                    .unwrap();
-                                }
-                                // If sender is not found
-                                None => {
-                                    path_to_receiver
-                                        .write()
-                                        .unwrap()
-                                        .insert(path.to_string(), DataReceiver { res_sender });
-                                }
-                            }
+                                    .boxed(),
+                                )
+                                .unwrap();
+                            transfer(path.to_string(), data_sender, DataReceiver { res_sender })
+                                .await
+                                .unwrap();
+                        }
+                        // If sender is not found
+                        None => {
+                            path_to_receiver
+                                .write()
+                                .unwrap()
+                                .insert(path.to_string(), DataReceiver { res_sender });
                         }
                     }
                 }
