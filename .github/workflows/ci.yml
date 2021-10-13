@@ -26,21 +26,29 @@ jobs:
         echo "hello, world" | curl -T - localhost:8181/mypath &
         diff <(echo "hello, world") <(curl localhost:8181/mypath)
         # Make a large random file
-        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=500M.dat
+        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=/tmp/500M.dat
         # Transfer large data over HTTP
-        cat 500M.dat | curl -T - localhost:8181/mypath &
-        diff <(cat 500M.dat) <(curl localhost:8181/mypath)
-        rm 500M.dat
+        cat /tmp/500M.dat | curl -T - localhost:8181/mypath &
+        diff <(cat /tmp/500M.dat) <(curl localhost:8181/mypath)
+        rm /tmp/500M.dat
 
         # Transfer data over HTTPS
         echo "hello, world with HTTPS" | curl -kT - https://localhost:8443/mypath2 &
         diff <(echo "hello, world with HTTPS") <(curl -k https://localhost:8443/mypath2)
         # Make a large random file
-        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=500M.dat
+        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=/tmp/500M.dat
         # Transfer large data over HTTPS
-        cat 500M.dat | curl -kT - https://localhost:8443/mypath2 &
-        diff <(cat 500M.dat) <(curl -k https://localhost:8443/mypath2)
-        rm 500M.dat
+        cat /tmp/500M.dat | curl -kT - https://localhost:8443/mypath2 &
+        diff <(cat /tmp/500M.dat) <(curl -k https://localhost:8443/mypath2)
+        rm /tmp/500M.dat
+
+        # Transfer data using multipart
+        # Make a large random file
+        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=/tmp/500M.dat
+        # Transfer large data over HTTP
+        curl -F myfile=@/tmp/500M.dat localhost:8181/mypath3 &
+        diff <(cat /tmp/500M.dat) <(curl localhost:8181/mypath3)
+        rm /tmp/500M.dat
     - name: Archive
       run: |
         set -eux
@@ -92,21 +100,29 @@ jobs:
         echo "hello, world" | curl -T - localhost:8181/mypath &
         diff <(echo "hello, world") <(curl localhost:8181/mypath)
         # Make a large random file
-        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=500M.dat
+        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=/tmp/500M.dat
         # Transfer large data over HTTP
-        cat 500M.dat | curl -T - localhost:8181/mypath &
-        diff <(cat 500M.dat) <(curl localhost:8181/mypath)
-        rm 500M.dat
+        cat /tmp/500M.dat | curl -T - localhost:8181/mypath &
+        diff <(cat /tmp/500M.dat) <(curl localhost:8181/mypath)
+        rm /tmp/500M.dat
 
         # Transfer data over HTTPS
         echo "hello, world with HTTPS" | curl -kT - https://localhost:8443/mypath2 &
         diff <(echo "hello, world with HTTPS") <(curl -k https://localhost:8443/mypath2)
         # Make a large random file
-        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=500M.dat
+        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=/tmp/500M.dat
         # Transfer large data over HTTPS
-        cat 500M.dat | curl -kT - https://localhost:8443/mypath2 &
-        diff <(cat 500M.dat) <(curl -k https://localhost:8443/mypath2)
-        rm 500M.dat
+        cat /tmp/500M.dat | curl -kT - https://localhost:8443/mypath2 &
+        diff <(cat /tmp/500M.dat) <(curl -k https://localhost:8443/mypath2)
+        rm /tmp/500M.dat
+
+        # Transfer data using multipart
+        # Make a large random file
+        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=/tmp/500M.dat
+        # Transfer large data over HTTP
+        curl -F myfile=@/tmp/500M.dat localhost:8181/mypath3 &
+        diff <(cat /tmp/500M.dat) <(curl localhost:8181/mypath3)
+        rm /tmp/500M.dat
         
         # Print server log
         docker logs piping

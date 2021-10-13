@@ -3,5 +3,6 @@
 
 /.idea
 /target
+/README.md
 /Dockerfile
 /heroku.yml

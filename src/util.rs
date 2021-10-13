@@ -34,6 +34,32 @@ impl OptionHeaderBuilder for http::response::Builder {
     }
 }
 
+pub trait HeaderValuesBuilder {
+    fn header_values<K, I>(self, key: K, values: I) -> Self
+    where
+        K: Clone + http::header::IntoHeaderName,
+        http::header::HeaderName: TryFrom<K>,
+        <http::header::HeaderName as TryFrom<K>>::Error: Into<http::Error>,
+        I: IntoIterator<Item = http::header::HeaderValue>;
+}
+
+impl HeaderValuesBuilder for http::response::Builder {
+    fn header_values<K, I>(mut self, key: K, values: I) -> Self
+    where
+        K: Clone + http::header::IntoHeaderName,
+        http::header::HeaderName: TryFrom<K>,
+        <http::header::HeaderName as TryFrom<K>>::Error: Into<http::Error>,
+        I: IntoIterator<Item = http::header::HeaderValue>,
+    {
+        if let Some(headers) = self.headers_mut() {
+            for value in values {
+                headers.append(key.clone(), value);
+            }
+        }
+        self
+    }
+}
+
 pin_project! {
     pub struct FinishDetectableStream<S> {
         #[pin]
