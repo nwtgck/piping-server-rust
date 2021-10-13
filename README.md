@@ -29,7 +29,7 @@ docker run -p 8181:8080 nwtgck/piping-server-rust
 
 ```bash
 # Download and extract
-curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.8.4/piping-server-x86-64-linux.tar.gz | tar xzf -
+curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.9.0/piping-server-x86-64-linux.tar.gz | tar xzf -
 # Run on 8181 port
 ./piping-server-x86-64-linux/piping-server --http-port=8181
 ```
@@ -38,7 +38,7 @@ curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.8.4/pi
 
 ```bash
 # Download and extract
-curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.8.4/piping-server-x86-64-apple-darwin.tar.gz | tar xzf -
+curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.9.0/piping-server-x86-64-apple-darwin.tar.gz | tar xzf -
 # Run on 8181 port
 ./piping-server-x86-64-apple-darwin/piping-server --http-port=8181
 ```
