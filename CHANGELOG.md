@@ -5,6 +5,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.9.0] - 2021-10-13
+### Changed
+* Update dependencies
+* Reject POST and PUT with Content-Range for now to detect resumable upload in the future
+* Add X-Robots-Tag: "none" header to receiver's response
+* (Docker) Allow Docker users to run without --init
+* Respond 405 Method Not Allowed when method is not supported
+* Support HEAD method for the reserved paths
+
+### Added
+* Support multipart upload
+* Create /noscript Web UI for transferring a file without JavaScript
+* Support `X-Piping` header passing arbitrary data from sender to receivers
+* Add /help page
+
 ## [0.8.5] - 2021-07-24
 ### Changed
 * Update dependencies
@@ -146,7 +161,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.8.5...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.8.5...v0.9.0
 [0.8.5]: https://github.com/nwtgck/piping-server-rust/compare/v0.8.4...v0.8.5
 [0.8.4]: https://github.com/nwtgck/piping-server-rust/compare/v0.8.3...v0.8.4
 [0.8.3]: https://github.com/nwtgck/piping-server-rust/compare/v0.8.2...v0.8.3
