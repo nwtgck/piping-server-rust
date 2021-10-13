@@ -1,4 +1,5 @@
 use crate::piping_server;
+use url::Url;
 
 fn escape_html_attribute(s: &str) -> String {
     return s
@@ -7,6 +8,40 @@ fn escape_html_attribute(s: &str) -> String {
         .replace("\"", "&quot;")
         .replace("<", "&lt;")
         .replace(">", "&gt;");
+}
+
+pub fn help(base_url: &Url) -> String {
+    let version: &'static str = env!("CARGO_PKG_VERSION");
+    // base_uri.path().
+    return std::format!(
+        r#"Help for Piping Server in Rust (Hyper) {version}
+(Repository: https://github.com/nwtgck/piping-server-rust)
+
+======= Get  =======
+curl {url}
+
+======= Send =======
+# Send a file
+curl -T myfile {url}
+
+# Send a text
+echo 'hello!' | curl -T - {url}
+
+# Send a directory (zip)
+zip -q -r - ./mydir | curl -T - {url}
+
+# Send a directory (tar.gz)
+tar zfcp - ./mydir | curl -T - {url}
+
+# Encryption
+## Send
+cat myfile | openssl aes-256-cbc | curl -T - {url}
+## Get
+curl {url} | openssl aes-256-cbc -d
+"#,
+        version = version,
+        url = base_url.join("mypath").unwrap(),
+    );
 }
 
 pub fn no_script_html(path: &String) -> String {

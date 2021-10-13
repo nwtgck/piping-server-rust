@@ -9,6 +9,7 @@ use hyper::Body;
 use serde_urlencoded;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use url::Url;
 
 use crate::dynamic_resources;
 use crate::util::{
@@ -21,6 +22,7 @@ pub mod reserved_paths {
         pub const INDEX: &'static str = "/";
         pub const NO_SCRIPT: &'static str = "/noscript";
         pub const VERSION: &'static str = "/version";
+        pub const HELP: &'static str = "/help";
         pub const FAVICON_ICO: &'static str = "/favicon.ico";
         pub const ROBOTS_TXT: &'static str = "/robots.txt";
     }
@@ -63,6 +65,7 @@ impl PipingServer {
 
     pub fn handler(
         &self,
+        uses_https: bool,
         req: Request<Body>,
         res_sender: oneshot::Sender<Response<Body>>,
     ) -> impl std::future::Future<Output = ()> {
@@ -113,6 +116,35 @@ impl PipingServer {
                             .header("Content-Type", "text/plain")
                             .header("Access-Control-Allow-Origin", "*")
                             .body(Body::from(format!("{} in Rust (Hyper)\n", version)))
+                            .unwrap();
+                        res_sender.send(res).unwrap();
+                        return;
+                    }
+                    reserved_paths::HELP => {
+                        let host: &str = req
+                            .headers()
+                            .get("host")
+                            .map(|h| h.to_str().unwrap())
+                            .unwrap_or_else(|| "hostname");
+                        let x_forwarded_proto_is_https =
+                            if let Some(proto) = req.headers().get("x-forwarded-proto") {
+                                proto.to_str().unwrap().contains("https")
+                            } else {
+                                false
+                            };
+                        let schema = if uses_https || x_forwarded_proto_is_https {
+                            "https"
+                        } else {
+                            "http"
+                        };
+                        let base_url = Url::parse(format!("{}://{}", schema, host).as_str())
+                            .unwrap_or_else(|_| "http://hostname/".parse().unwrap());
+                        let help = dynamic_resources::help(&base_url);
+                        let res = Response::builder()
+                            .status(200)
+                            .header("Content-Type", "text/plain")
+                            .header("Access-Control-Allow-Origin", "*")
+                            .body(Body::from(help))
                             .unwrap();
                         res_sender.send(res).unwrap();
                         return;

@@ -50,8 +50,9 @@ async fn serve() -> Serve {
     tokio::spawn(async move {
         let http_svc = make_service_fn(|_| {
             let piping_server = piping_server.clone();
-            let handler =
-                req_res_handler(move |req, res_sender| piping_server.handler(req, res_sender));
+            let handler = req_res_handler(move |req, res_sender| {
+                piping_server.handler(false, req, res_sender)
+            });
             futures::future::ok::<_, Infallible>(service_fn(handler))
         });
         let http_server = Server::bind(&([127, 0, 0, 1], 0).into()).serve(http_svc);
@@ -163,6 +164,34 @@ async fn f() -> Result<(), BoxError> {
     // Body should contains version
     let body_string = String::from_utf8(read_all_body(body).await)?;
     assert!(body_string.contains(env!("CARGO_PKG_VERSION")));
+
+    assert_eq!(
+        get_header_value(&parts.headers, "content-type"),
+        Some("text/plain")
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-allow-origin"),
+        Some("*")
+    );
+
+    serve.shutdown().await?;
+    Ok(())
+}
+
+#[it("should return help page")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let uri = format!("http://{}/help", serve.addr).parse::<http::Uri>()?;
+
+    let get_req = hyper::Request::builder()
+        .method(hyper::Method::GET)
+        .uri(uri.clone())
+        .body(hyper::Body::empty())?;
+    let client = Client::new();
+    let res = client.request(get_req).await?;
+
+    let (parts, _) = res.into_parts();
 
     assert_eq!(
         get_header_value(&parts.headers, "content-type"),
