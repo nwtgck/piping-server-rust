@@ -11,7 +11,7 @@ jobs:
     - name: Release build
       run: |
         set -eux
-        docker run --rm -v "$(pwd)":/home/rust/src ekidd/rust-musl-builder:1.51.0 sh -c 'sudo chown -R rust:rust . && cargo build --release'
+        docker run --rm -v "$(pwd)":/home/rust/src nwtgck/rust-musl-builder:1.55.0 sh -c 'sudo chown -R rust:rust . && cargo build --release'
         sudo chown -R $USER:$USER .
     - name: Operational test
       run: |
@@ -42,6 +42,11 @@ jobs:
         diff <(cat /tmp/500M.dat) <(curl -k https://localhost:8443/mypath2)
         rm /tmp/500M.dat
 
+        # HTTP/2 support
+        (echo hello | curl -ksST- https://localhost:8443/mypath3 -o /dev/null -w '%{http_version}:%{http_code}\n' > /tmp/http2_post.txt) &
+        diff <(echo '2:200') <(curl -ksS https://localhost:8443/mypath3 -o /dev/null -w '%{http_version}:%{http_code}\n')
+        diff <(echo '2:200') /tmp/http2_post.txt
+
         # Transfer data using multipart
         # Make a large random file
         dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=/tmp/500M.dat
@@ -49,6 +54,7 @@ jobs:
         curl -F myfile=@/tmp/500M.dat localhost:8181/mypath3 &
         diff <(cat /tmp/500M.dat) <(curl localhost:8181/mypath3)
         rm /tmp/500M.dat
+
     - name: Archive
       run: |
         set -eux
@@ -116,6 +122,11 @@ jobs:
         diff <(cat /tmp/500M.dat) <(curl -k https://localhost:8443/mypath2)
         rm /tmp/500M.dat
 
+        # HTTP/2 support
+        (echo hello | curl -ksST- https://localhost:8443/mypath3 -o /dev/null -w '%{http_version}:%{http_code}\n' > /tmp/http2_post.txt) &
+        diff <(echo '2:200') <(curl -ksS https://localhost:8443/mypath3 -o /dev/null -w '%{http_version}:%{http_code}\n')
+        diff <(echo '2:200') /tmp/http2_post.txt
+
         # Transfer data using multipart
         # Make a large random file
         dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=/tmp/500M.dat
@@ -123,7 +134,7 @@ jobs:
         curl -F myfile=@/tmp/500M.dat localhost:8181/mypath3 &
         diff <(cat /tmp/500M.dat) <(curl localhost:8181/mypath3)
         rm /tmp/500M.dat
-        
+
         # Print server log
         docker logs piping
         # Delete container
