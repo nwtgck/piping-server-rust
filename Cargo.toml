@@ -10,10 +10,11 @@ futures = { version = "0.3", default-features = false, features = ["std"] }
 structopt = "0.3"
 http = "0.2"
 tokio = { version = "1.12", features = ["rt-multi-thread", "macros"] }
-rustls = "0.19"
+rustls = "0.20"
+rustls-pemfile = "0.2"
 hyper-rustls = "0.22"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
-tokio-rustls = "0.22"
+tokio-rustls = "0.23"
 log = "0.4"
 env_logger = "0.9"
 pin-project-lite = "0.2"
