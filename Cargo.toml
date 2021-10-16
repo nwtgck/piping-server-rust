@@ -1,6 +1,6 @@
 [package]
 name = "piping-server"
-version = "0.8.5"
+version = "0.9.0"
 authors = ["Ryo Ota <nwtgck@nwtgck.org>"]
 edition = "2018"
 
@@ -18,6 +18,10 @@ tokio-rustls = { git = "https://github.com/tokio-rs/tls.git", rev = "8501aafae5c
 log = "0.4"
 env_logger = "0.9"
 pin-project-lite = "0.2"
+mime = "0.3"
+mpart-async = "0.5"
+serde_urlencoded = "0.7"
+url = { version = "2.2", default-features = false }
 
 [dev-dependencies]
 specit = {version  = "0.4.0", features = ["tokio"] }
