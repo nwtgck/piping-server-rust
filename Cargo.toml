@@ -18,7 +18,7 @@ log = "0.4"
 env_logger = "0.9"
 pin-project-lite = "0.2"
 mime = "0.3"
-mpart-async = "0.5"
+mpart-async = { version = "0.5", default-features = false }
 serde_urlencoded = "0.7"
 url = { version = "2.2", default-features = false }
 
