@@ -32,6 +32,7 @@ pub const NO_SCRIPT_PATH_QUERY_PARAMETER_NAME: &str = "path";
 
 struct DataSender {
     req: Request<Body>,
+    #[allow(clippy::type_complexity)]
     res_body_streams_sender: RwLock<
         mpsc::UnboundedSender<
             Pin<Box<dyn Stream<Item = Result<Bytes, std::convert::Infallible>> + Send>>,
@@ -48,6 +49,12 @@ pub struct PipingServer {
     path_to_receiver: Arc<RwLock<HashMap<String, DataReceiver>>>,
 }
 
+impl Default for PipingServer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PipingServer {
     pub fn new() -> Self {
         PipingServer {
@@ -56,6 +63,7 @@ impl PipingServer {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn clone(&self) -> Self {
         PipingServer {
             path_to_sender: Arc::clone(&self.path_to_sender),
@@ -76,7 +84,7 @@ impl PipingServer {
 
             log::info!("{} {:} {:?}", req.method(), req.uri(), req.version());
 
-            if req.method() == &Method::GET || req.method() == &Method::HEAD {
+            if req.method() == Method::GET || req.method() == Method::HEAD {
                 match path {
                     reserved_paths::INDEX => {
                         let res = Response::builder()
@@ -398,6 +406,8 @@ async fn get_transfer_request(
         .map(|b| b.to_string())
         .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "boundary not found"))?;
     let mut multipart_stream = mpart_async::server::MultipartStream::new(boundary, body);
+
+    #[allow(clippy::never_loop)]
     while let Ok(Some(field)) = multipart_stream.try_next().await {
         // NOTE: Only first one is transferred
         let headers = field.headers().clone();
@@ -408,10 +418,10 @@ async fn get_transfer_request(
             body: Body::wrap_stream(field),
         });
     }
-    return Err(std::io::Error::new(
+    Err(std::io::Error::new(
         std::io::ErrorKind::Other,
         "multipart error",
-    ));
+    ))
 }
 
 async fn transfer(
@@ -437,7 +447,7 @@ async fn transfer(
         .option_header("Content-Type", transfer_request.content_type)
         .option_header("Content-Length", transfer_request.content_length)
         .option_header("Content-Disposition", transfer_request.content_disposition)
-        .header_values("X-Piping", x_piping.into_iter().map(|x| x.clone()))
+        .header_values("X-Piping", x_piping.into_iter().cloned())
         .header("Access-Control-Allow-Origin", "*")
         .option_header(
             "Access-Control-Expose-Headers",
@@ -474,5 +484,5 @@ async fn transfer(
             .boxed(),
         )
         .unwrap();
-    return Ok(());
+    Ok(())
 }

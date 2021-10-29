@@ -2,12 +2,11 @@ use crate::piping_server;
 use url::Url;
 
 fn escape_html_attribute(s: &str) -> String {
-    return s
-        .replace("&", "&amp;")
+    s.replace("&", "&amp;")
         .replace("'", "&apos;")
         .replace("\"", "&quot;")
         .replace("<", "&lt;")
-        .replace(">", "&gt;");
+        .replace(">", "&gt;")
 }
 
 pub fn help(base_url: &Url) -> String {
@@ -44,7 +43,7 @@ curl {url} | openssl aes-256-cbc -d
     );
 }
 
-pub fn no_script_html(path: &String) -> String {
+pub fn no_script_html(path: &str) -> String {
     // language=html
     return std::format!(
         r#"<!DOCTYPE html>
