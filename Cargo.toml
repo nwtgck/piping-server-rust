@@ -2,7 +2,7 @@
 name = "piping-server"
 version = "0.9.1"
 authors = ["Ryo Ota <nwtgck@nwtgck.org>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 hyper = { version = "0.14", features = ["stream", "server", "http1", "http2", "tcp"] }
