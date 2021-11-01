@@ -3,6 +3,11 @@ name: CI
 on: [push, pull_request]
 
 jobs:
+  cargo_fmt:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+    - run: cargo fmt --all -- --check
   build_for_linux_and_operational_test:
     runs-on: ubuntu-18.04
     steps:

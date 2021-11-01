@@ -48,18 +48,20 @@ pub struct PipingServer {
     path_to_receiver: Arc<RwLock<HashMap<String, DataReceiver>>>,
 }
 
+impl Clone for PipingServer {
+    fn clone(&self) -> Self {
+        PipingServer {
+            path_to_sender: Arc::clone(&self.path_to_sender),
+            path_to_receiver: Arc::clone(&self.path_to_receiver),
+        }
+    }
+}
+
 impl PipingServer {
     pub fn new() -> Self {
         PipingServer {
             path_to_sender: Arc::new(RwLock::new(HashMap::new())),
             path_to_receiver: Arc::new(RwLock::new(HashMap::new())),
-        }
-    }
-
-    pub fn clone(&self) -> Self {
-        PipingServer {
-            path_to_sender: Arc::clone(&self.path_to_sender),
-            path_to_receiver: Arc::clone(&self.path_to_receiver),
         }
     }
 
@@ -76,7 +78,7 @@ impl PipingServer {
 
             log::info!("{} {:} {:?}", req.method(), req.uri(), req.version());
 
-            if req.method() == &Method::GET || req.method() == &Method::HEAD {
+            if req.method() == Method::GET || req.method() == Method::HEAD {
                 match path {
                     reserved_paths::INDEX => {
                         let res = Response::builder()
@@ -398,6 +400,7 @@ async fn get_transfer_request(
         .map(|b| b.to_string())
         .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "boundary not found"))?;
     let mut multipart_stream = mpart_async::server::MultipartStream::new(boundary, body);
+
     while let Ok(Some(field)) = multipart_stream.try_next().await {
         // NOTE: Only first one is transferred
         let headers = field.headers().clone();
@@ -437,7 +440,7 @@ async fn transfer(
         .option_header("Content-Type", transfer_request.content_type)
         .option_header("Content-Length", transfer_request.content_length)
         .option_header("Content-Disposition", transfer_request.content_disposition)
-        .header_values("X-Piping", x_piping.into_iter().map(|x| x.clone()))
+        .header_values("X-Piping", x_piping.into_iter().cloned())
         .header("Access-Control-Allow-Origin", "*")
         .option_header(
             "Access-Control-Expose-Headers",
