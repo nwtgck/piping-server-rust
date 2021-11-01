@@ -3,23 +3,6 @@
 version: 2
 
 jobs:
-  cargo_ci:
-    docker:
-      - image: circleci/rust:1
-    steps:
-      - checkout
-      - run:
-          name: rustup component add
-          command: rustup component add rustfmt clippy
-      - run:
-          name: check
-          command: cargo check
-      - run:
-          name: fmt
-          command: cargo fmt --all -- --check
-      - run:
-          name: clippy
-          command: cargo clippy -- -D warnings
   build_and_operational_test:
     docker:
       - image: circleci/rust:1
@@ -104,6 +87,5 @@ workflows:
   version: 2
   tests:
     jobs:
-      - cargo_ci
       - build_and_operational_test
       - docker_test
