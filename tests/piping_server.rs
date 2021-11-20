@@ -399,6 +399,10 @@ async fn f() -> Result<(), BoxError> {
     let send_res = client.request(send_req).await?;
     let (send_res_parts, _send_res_body) = send_res.into_parts();
     assert_eq!(send_res_parts.status, http::StatusCode::OK);
+    assert_eq!(
+        get_header_value(&send_res_parts.headers, "access-control-allow-origin"),
+        Some("*")
+    );
 
     let get_req = hyper::Request::builder()
         .method(hyper::Method::GET)
@@ -471,7 +475,12 @@ async fn f() -> Result<(), BoxError> {
 
     let client = Client::new();
     let send_res = client.request(send_req).await?;
-    assert_eq!(send_res.status(), http::StatusCode::OK);
+    let (send_res_parts, _send_res_body) = send_res.into_parts();
+    assert_eq!(send_res_parts.status, http::StatusCode::OK);
+    assert_eq!(
+        get_header_value(&send_res_parts.headers, "access-control-allow-origin"),
+        Some("*")
+    );
 
     let (parts, body) = get_res_rx.await?.into_parts();
     let all_bytes: Vec<u8> = read_all_body(body).await;
