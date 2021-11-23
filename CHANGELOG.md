@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.10.0] - 2021-11-23
+### Changed
+* Update dependencies
+* (Docker) Use Rust version 1.56.1 in build
+
+### Added
+* TLS certificate hot reload
+* Add "Top page" link to /noscript
+
 ## [0.9.1] - 2021-10-16
 ### Changed
 * Update dependencies
@@ -166,7 +175,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.8.5...v0.9.0
 [0.8.5]: https://github.com/nwtgck/piping-server-rust/compare/v0.8.4...v0.8.5
