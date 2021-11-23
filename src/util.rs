@@ -143,9 +143,10 @@ pub fn hot_reload_tls_cfg(
         load_tls_config(cert_path.deref(), key_path.deref()).unwrap(),
     )));
 
-    tokio::spawn({
+    // NOTE: tokio::spawn() blocks servers in some environment because of `loop {}`
+    std::thread::spawn({
         let tls_cfg_rwlock = tls_cfg_rwlock_arc.clone();
-        async move {
+        move || {
             use notify::Watcher;
             let (tx, rx) = std::sync::mpsc::channel();
 

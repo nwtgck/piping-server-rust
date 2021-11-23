@@ -64,8 +64,10 @@ You can clone, build and run `piping-server` as follows.
 # Clone
 git clone https://github.com/nwtgck/piping-server-rust.git
 cd piping-server-rust
-# Build and run on 8181 port
-cargo run --release -- --http-port=8181
+# Build
+cargo build --release
+# Run on 8181 port
+./target/release/piping-server --http-port=8181
 ```
 
 ### Server-side help
