@@ -76,6 +76,7 @@ pub fn no_script_html(path: &str) -> String {
   <a href="https://github.com/nwtgck/piping-server-rust">
     https://github.com/nwtgck/piping-server-rust
   </a><br>
+  <a href=".">Top page</a><br>
 </body>
 </html>
 "#,
