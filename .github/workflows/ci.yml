@@ -3,6 +3,11 @@ name: CI
 on: [push, pull_request]
 
 jobs:
+  cargo_fmt:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+    - run: cargo fmt --all -- --check
   build_for_linux_and_operational_test:
     runs-on: ubuntu-18.04
     steps:
@@ -11,11 +16,11 @@ jobs:
     - name: Release build
       run: |
         set -eux
-        docker run --rm -v "$(pwd)":/home/rust/src nwtgck/rust-musl-builder:1.55.0 sh -c 'sudo chown -R rust:rust . && cargo build --release'
+        docker run --rm -v "$(pwd)":/home/rust/src nwtgck/rust-musl-builder:1.56.1 sh -c 'sudo chown -R rust:rust . && cargo build --release'
         sudo chown -R $USER:$USER .
     - name: Operational test
       run: |
-        set -x
+        set -xeu
         # Create certificates
         mkdir ssl_certs && cd ssl_certs && openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -sha256 -nodes --subj '/CN=localhost/' && cd -
         # Run a server

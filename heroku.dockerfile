@@ -1,6 +1,6 @@
 # NOTE: Multi-stage Build
 
-FROM nwtgck/rust-musl-builder:1.55.0 as build
+FROM nwtgck/rust-musl-builder:1.56.1 as build
 
 # Copy to current directory and change the owner
 COPY --chown=rust:rust . ./
@@ -8,7 +8,7 @@ COPY --chown=rust:rust . ./
 RUN cargo build --release
 
 
-FROM alpine:3.14.2
+FROM alpine:3.14.3
 LABEL maintainer="Ryo Ota <nwtgck@nwtgck.org>"
 
 # Copy executable

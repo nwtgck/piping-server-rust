@@ -2,6 +2,7 @@ use core::convert::Infallible;
 use futures::stream::{StreamExt, TryStreamExt};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::Server;
+use std::sync::{Arc, RwLock};
 use structopt::StructOpt;
 use tokio::net::TcpListener;
 use tokio_rustls::TlsAcceptor;
@@ -38,7 +39,7 @@ async fn main() -> std::io::Result<()> {
     let opt = Opt::from_args();
 
     let mut tcp: TcpListener;
-    let tls_acceptor: TlsAcceptor;
+    let tls_cfg_rwlock_arc: Arc<RwLock<Arc<rustls::ServerConfig>>>;
 
     let piping_server = &PipingServer::new();
 
@@ -49,12 +50,11 @@ async fn main() -> std::io::Result<()> {
         if let (Some(https_port), Some(crt_path), Some(key_path)) =
             (opt.https_port, opt.crt_path, opt.key_path)
         {
-            let tls_cfg = util::load_tls_config(crt_path, key_path)?;
+            tls_cfg_rwlock_arc = util::hot_reload_tls_cfg(crt_path, key_path);
 
             let addr: std::net::SocketAddr = ([0, 0, 0, 0], https_port).into();
             // Create a TCP listener via tokio.
             tcp = TcpListener::bind(&addr).await?;
-            tls_acceptor = TlsAcceptor::from(std::sync::Arc::new(tls_cfg));
             // Prepare a long-running future stream to accept and serve clients.
             let incoming_tls_stream = util::TokioIncoming::new(&mut tcp)
                 .map_err(|e| util::make_io_error(format!("Incoming failed: {:?}", e)))
@@ -67,7 +67,10 @@ async fn main() -> std::io::Result<()> {
                             return None;
                         }
                     };
-                    match tls_acceptor.accept(client).await {
+
+                    let tls_cfg: Arc<rustls::ServerConfig> =
+                        (*tls_cfg_rwlock_arc.read().unwrap()).clone();
+                    match TlsAcceptor::from(tls_cfg).accept(client).await {
                         Ok(x) => Some(Ok::<_, std::io::Error>(x)),
                         Err(e) => {
                             log::error!("Client connection error: {}", e);

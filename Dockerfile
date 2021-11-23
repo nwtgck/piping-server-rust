@@ -1,16 +1,16 @@
 # NOTE: Multi-stage Build
 
-FROM nwtgck/rust-musl-builder:1.55.0 as build
-
-# Copy to current directory and change the owner
-COPY --chown=rust:rust . ./
-# Build
-RUN cargo build --release
+FROM nwtgck/rust-musl-builder:1.56.1 as build
 
 # Install tini
 ENV TINI_VERSION v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-static /tini-static
 RUN sudo chmod +x /tini-static
+
+# Copy to current directory and change the owner
+COPY --chown=rust:rust . ./
+# Build
+RUN cargo build --release
 
 FROM scratch
 LABEL maintainer="Ryo Ota <nwtgck@nwtgck.org>"

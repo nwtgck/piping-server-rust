@@ -388,17 +388,21 @@ async fn f() -> Result<(), BoxError> {
 
     let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
 
-    let send_str_body = "this is a content";
+    let send_body_str = "this is a content";
     let send_req = hyper::Request::builder()
         .method(hyper::Method::POST)
         .header("Content-Type", "text/plain")
         .uri(uri.clone())
-        .body(hyper::Body::from(send_str_body))?;
+        .body(hyper::Body::from(send_body_str))?;
 
     let client = Client::new();
     let send_res = client.request(send_req).await?;
     let (send_res_parts, _send_res_body) = send_res.into_parts();
     assert_eq!(send_res_parts.status, http::StatusCode::OK);
+    assert_eq!(
+        get_header_value(&send_res_parts.headers, "access-control-allow-origin"),
+        Some("*")
+    );
 
     let get_req = hyper::Request::builder()
         .method(hyper::Method::GET)
@@ -409,7 +413,7 @@ async fn f() -> Result<(), BoxError> {
 
     let all_bytes: Vec<u8> = read_all_body(body).await;
 
-    let expect = send_str_body.to_owned().into_bytes();
+    let expect = send_body_str.to_owned().into_bytes();
     assert_eq!(all_bytes, expect);
 
     assert_eq!(
@@ -418,7 +422,7 @@ async fn f() -> Result<(), BoxError> {
     );
     assert_eq!(
         get_header_value(&parts.headers, "content-length"),
-        Some(send_str_body.len().to_string().as_str())
+        Some(send_body_str.len().to_string().as_str())
     );
     assert_eq!(
         get_header_value(&parts.headers, "content-disposition"),
@@ -462,20 +466,25 @@ async fn f() -> Result<(), BoxError> {
         }
     });
 
-    let send_str_body = "this is a content";
+    let send_body_str = "this is a content";
     let send_req = hyper::Request::builder()
         .method(hyper::Method::POST)
         .header("Content-Type", "text/plain")
         .uri(uri.clone())
-        .body(hyper::Body::from(send_str_body))?;
+        .body(hyper::Body::from(send_body_str))?;
 
     let client = Client::new();
     let send_res = client.request(send_req).await?;
-    assert_eq!(send_res.status(), http::StatusCode::OK);
+    let (send_res_parts, _send_res_body) = send_res.into_parts();
+    assert_eq!(send_res_parts.status, http::StatusCode::OK);
+    assert_eq!(
+        get_header_value(&send_res_parts.headers, "access-control-allow-origin"),
+        Some("*")
+    );
 
     let (parts, body) = get_res_rx.await?.into_parts();
     let all_bytes: Vec<u8> = read_all_body(body).await;
-    let expect = send_str_body.to_owned().into_bytes();
+    let expect = send_body_str.to_owned().into_bytes();
     assert_eq!(all_bytes, expect);
 
     assert_eq!(
@@ -484,7 +493,7 @@ async fn f() -> Result<(), BoxError> {
     );
     assert_eq!(
         get_header_value(&parts.headers, "content-length"),
-        Some(send_str_body.len().to_string().as_str())
+        Some(send_body_str.len().to_string().as_str())
     );
     assert_eq!(
         get_header_value(&parts.headers, "content-disposition"),
@@ -513,13 +522,13 @@ async fn f() -> Result<(), BoxError> {
 
     let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
 
-    let send_str_body = "this is a content";
+    let send_body_str = "this is a content";
     let send_req = hyper::Request::builder()
         .method(hyper::Method::POST)
         .header("Content-Type", "text/plain")
         .header("X-Piping", "mymetadata")
         .uri(uri.clone())
-        .body(hyper::Body::from(send_str_body))?;
+        .body(hyper::Body::from(send_body_str))?;
 
     let client = Client::new();
     let send_res = client.request(send_req).await?;
@@ -535,7 +544,7 @@ async fn f() -> Result<(), BoxError> {
 
     let all_bytes: Vec<u8> = read_all_body(body).await;
 
-    let expect = send_str_body.to_owned().into_bytes();
+    let expect = send_body_str.to_owned().into_bytes();
     assert_eq!(all_bytes, expect);
 
     assert_eq!(
@@ -544,7 +553,7 @@ async fn f() -> Result<(), BoxError> {
     );
     assert_eq!(
         get_header_value(&parts.headers, "content-length"),
-        Some(send_str_body.len().to_string().as_str())
+        Some(send_body_str.len().to_string().as_str())
     );
     assert_eq!(
         get_header_value(&parts.headers, "content-disposition"),
@@ -577,7 +586,7 @@ async fn f() -> Result<(), BoxError> {
 
     let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
 
-    let send_str_body = "this is a content";
+    let send_body_str = "this is a content";
     let send_req = hyper::Request::builder()
         .method(hyper::Method::POST)
         .header("Content-Type", "text/plain")
@@ -585,7 +594,7 @@ async fn f() -> Result<(), BoxError> {
         .header("X-Piping", "mymetadata2")
         .header("X-Piping", "mymetadata3")
         .uri(uri.clone())
-        .body(hyper::Body::from(send_str_body))?;
+        .body(hyper::Body::from(send_body_str))?;
 
     let client = Client::new();
     let send_res = client.request(send_req).await?;
@@ -601,7 +610,7 @@ async fn f() -> Result<(), BoxError> {
 
     let all_bytes: Vec<u8> = read_all_body(body).await;
 
-    let expect = send_str_body.to_owned().into_bytes();
+    let expect = send_body_str.to_owned().into_bytes();
     assert_eq!(all_bytes, expect);
 
     assert_eq!(
