@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.10.1] - 2021-11-23
+### Fixed
+* Not block HTTP and HTTPS serving in some environment
+
 ## [0.10.0] - 2021-11-23
 ### Changed
 * Update dependencies
@@ -175,7 +179,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.10.1...HEAD
+[0.10.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.8.5...v0.9.0
