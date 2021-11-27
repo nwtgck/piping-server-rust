@@ -12,12 +12,12 @@ COPY --chown=rust:rust Cargo.toml Cargo.lock ./
 # Build empty project for better cache
 RUN mkdir src && \
     echo "fn main() {}" > src/main.rs && \
-    cargo build --release && rm -r src
+    cargo build --release --locked && rm -r src
 
 # Copy to current directory and change the owner
 COPY --chown=rust:rust . ./
 # Build
-RUN cargo build --release
+RUN cargo build --release --locked
 
 FROM scratch
 LABEL maintainer="Ryo Ota <nwtgck@nwtgck.org>"

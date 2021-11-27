@@ -16,7 +16,7 @@ jobs:
     - name: Release build
       run: |
         set -eux
-        docker run --rm -v "$(pwd)":/home/rust/src nwtgck/rust-musl-builder:1.56.1 sh -c 'sudo chown -R rust:rust . && cargo build --release'
+        docker run --rm -v "$(pwd)":/home/rust/src nwtgck/rust-musl-builder:1.56.1 sh -c 'sudo chown -R rust:rust . && cargo build --release --locked'
         sudo chown -R $USER:$USER .
     - name: Operational test
       run: |
@@ -78,7 +78,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: cargo test -- --color=always --nocapture
-    - run: cargo build --release
+    - run: cargo build --release --locked
     - name: Archive
       run: |
         set -eux
