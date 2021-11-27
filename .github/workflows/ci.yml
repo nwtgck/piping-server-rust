@@ -177,3 +177,9 @@ jobs:
           -m "Release ${{ steps.extract_tag.outputs.tag }}" ${{ steps.extract_tag.outputs.tag }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  heroku_docker_build:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: docker build -t piping-server-rust -f ./heroku.dockerfile .
