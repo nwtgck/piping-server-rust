@@ -144,7 +144,7 @@ pub fn hot_reload_tls_cfg(
     )));
 
     // NOTE: tokio::spawn() blocks servers in some environment because of `loop {}`
-    std::thread::spawn({
+    std::thread::spawn::<_, Result<(), notify::Error>>({
         let tls_cfg_rwlock = tls_cfg_rwlock_arc.clone();
         move || {
             use notify::Watcher;
@@ -171,10 +171,6 @@ pub fn hot_reload_tls_cfg(
                     Err(e) => log::error!("Watch certificates error: {:?}", e),
                 }
             }
-
-            // To tell Error type to rust compiler
-            #[allow(unreachable_code)]
-            Ok::<_, notify::Error>(())
         }
     });
 
