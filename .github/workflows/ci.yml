@@ -203,7 +203,7 @@ jobs:
       matrix:
         target:
           - armv7-unknown-linux-musleabihf
-    runs-on: ${{ matrix.runs-on }}
+    runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
       - run: cargo install cross
