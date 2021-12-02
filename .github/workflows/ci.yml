@@ -218,4 +218,4 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: cargo install cross
-      - run: cross build --target=${{ matrix.target }}
+      - run: cross build --target=${{ matrix.target }} --release --locked
