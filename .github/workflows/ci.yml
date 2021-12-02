@@ -216,4 +216,4 @@ jobs:
             ~/.cargo/git/db/
           key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo install cross
-      - run: cross build --target=${{ matrix.target }}
+      - run: cross build --target=${{ matrix.target }} 
