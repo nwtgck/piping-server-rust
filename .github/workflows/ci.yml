@@ -221,3 +221,14 @@ jobs:
       - name: Install cross
         run: curl -L https://github.com/rust-embedded/cross/releases/download/v0.2.1/cross-v0.2.1-x86_64-unknown-linux-gnu.tar.gz | tar xzf -
       - run: ./cross build --target=${{ matrix.target }} --release --locked
+      - name: Archive binary
+        run: |
+          set -eu
+          mkdir ./piping-server-${{ matrix.target }}
+          cp ./target/${{ matrix.target }}/release/piping-server ./piping-server-${{ matrix.target }}
+           tar zcf ./piping-server-${{ matrix.target }}.tar.gz ./piping-server-${{ matrix.target }}
+      - uses: actions/upload-artifact@v2
+        with:
+          name: cross_build_artifact
+          path: |
+            piping-server-*.tar.gz
