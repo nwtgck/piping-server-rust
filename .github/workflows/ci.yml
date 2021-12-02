@@ -212,7 +212,6 @@ jobs:
           - i586-unknown-linux-musl
           - i686-linux-android
           - i686-unknown-linux-musl
-          - mips-unknown-linux-musl
           - x86_64-linux-android
           - x86_64-unknown-linux-musl
     runs-on: ubuntu-18.04
