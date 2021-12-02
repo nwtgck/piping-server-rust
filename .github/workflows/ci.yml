@@ -202,18 +202,18 @@ jobs:
     strategy:
       matrix:
         target:
-          - aarch64-unknown-linux-musl
-          - arm-linux-androideabi
-          - arm-unknown-linux-musleabi
-          - arm-unknown-linux-musleabihf
-          - armv5te-unknown-linux-musleabi
-          - armv7-linux-androideabi
-          - armv7-unknown-linux-musleabihf
-          - i586-unknown-linux-musl
-          - i686-linux-android
-          - i686-unknown-linux-musl
-          - x86_64-linux-android
-          - x86_64-pc-windows-gnu
+#          - aarch64-unknown-linux-musl
+#          - arm-linux-androideabi
+#          - arm-unknown-linux-musleabi
+#          - arm-unknown-linux-musleabihf
+#          - armv5te-unknown-linux-musleabi
+#          - armv7-linux-androideabi
+#          - armv7-unknown-linux-musleabihf
+#          - i586-unknown-linux-musl
+#          - i686-linux-android
+#          - i686-unknown-linux-musl
+#          - x86_64-linux-android
+#          - x86_64-pc-windows-gnu
           - x86_64-unknown-linux-musl
     runs-on: ubuntu-18.04
     steps:
@@ -226,7 +226,7 @@ jobs:
           set -eu
           mkdir ./piping-server-${{ matrix.target }}
           cp ./target/${{ matrix.target }}/release/piping-server ./piping-server-${{ matrix.target }}
-           tar zcf ./piping-server-${{ matrix.target }}.tar.gz ./piping-server-${{ matrix.target }}
+          tar zcf ./piping-server-${{ matrix.target }}.tar.gz ./piping-server-${{ matrix.target }}
       - uses: actions/upload-artifact@v2
         with:
           name: cross_build_artifact
