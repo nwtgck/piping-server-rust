@@ -202,18 +202,21 @@ jobs:
     strategy:
       matrix:
         target:
+          - aarch64-unknown-linux-musl
+          - arm-linux-androideabi
+          - arm-unknown-linux-musleabi
+          - arm-unknown-linux-musleabihf
+          - armv5te-unknown-linux-musleabi
+          - armv7-linux-androideabi
           - armv7-unknown-linux-musleabihf
+          - i586-unknown-linux-musl
+          - i686-linux-android
+          - i686-unknown-linux-musl
+          - mips-unknown-linux-musl
+          - x86_64-linux-android
+          - x86_64-unknown-linux-musl
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
-      - name: Cargo cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo install cross
-      - run: cross build --target=${{ matrix.target }} 
+      - run: cross build --target=${{ matrix.target }}
