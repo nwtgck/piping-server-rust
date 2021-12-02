@@ -197,3 +197,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: docker build -t piping-server-rust -f ./heroku.dockerfile .
+
+  cross_build:
+    strategy:
+      matrix:
+        target:
+          - armv7-unknown-linux-musleabihf
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v2
+      - run: cargo install cross
+      - run: cross build --target=${{ matrix.target }}
