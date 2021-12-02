@@ -217,5 +217,6 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
-      - run: cargo install cross
-      - run: cross build --target=${{ matrix.target }} --release --locked
+      - name: Install cross
+        run: curl -L https://github.com/rust-embedded/cross/releases/download/v0.2.1/cross-v0.2.1-x86_64-unknown-linux-gnu.tar.gz | tar xf -
+      - run: ./cross build --target=${{ matrix.target }} --release --locked
