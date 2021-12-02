@@ -211,7 +211,6 @@ jobs:
           - armv7-unknown-linux-musleabihf
           - i586-unknown-linux-musl
           - i686-linux-android
-          - i686-pc-windows-gnu
           - i686-unknown-linux-musl
           - x86_64-linux-android
           - x86_64-pc-windows-gnu
