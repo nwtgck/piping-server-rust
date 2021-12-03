@@ -8,23 +8,77 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: cargo fmt --all -- --check
-  build_for_linux_and_operational_test:
-    runs-on: ubuntu-18.04
+
+  cargo_test:
+    strategy:
+      matrix:
+        runs-on:
+          - ubuntu-18.04
+          - macOS-10.15
+    runs-on: ${{ matrix.runs-on }}
     steps:
     - uses: actions/checkout@v2
     - run: cargo test -- --color=always --nocapture
-    - name: Release build
-      run: |
-        set -eux
-        docker run --rm -v "$(pwd)":/home/rust/src nwtgck/rust-musl-builder:1.56.1 sh -c 'sudo chown -R rust:rust . && cargo build --release'
-        sudo chown -R $USER:$USER .
+
+  cross_build:
+    strategy:
+      matrix:
+        target:
+          - aarch64-unknown-linux-musl
+          - arm-linux-androideabi
+          - arm-unknown-linux-musleabi
+          - arm-unknown-linux-musleabihf
+          - armv5te-unknown-linux-musleabi
+          - armv7-linux-androideabi
+          - armv7-unknown-linux-musleabihf
+          - i586-unknown-linux-musl
+          - i686-linux-android
+          - i686-unknown-linux-musl
+          - x86_64-linux-android
+          - x86_64-pc-windows-gnu
+          - x86_64-unknown-linux-musl
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install cross
+        run: curl -L https://github.com/rust-embedded/cross/releases/download/v0.2.1/cross-v0.2.1-x86_64-unknown-linux-gnu.tar.gz | tar xzf -
+      - run: ./cross build --target=${{ matrix.target }} --release --locked
+      - name: Archive binary
+        run: |
+          set -eu
+          mkdir ./piping-server-${{ matrix.target }}
+          if [[ "${{ matrix.target }}" == *"-windows-"* ]]; then
+            cp ./target/${{ matrix.target }}/release/piping-server.exe ./piping-server-${{ matrix.target }}
+            zip -r ./piping-server-${{ matrix.target }}.zip ./piping-server-${{ matrix.target }}
+          else
+            cp ./target/${{ matrix.target }}/release/piping-server ./piping-server-${{ matrix.target }}
+            tar zcf ./piping-server-${{ matrix.target }}.tar.gz ./piping-server-${{ matrix.target }}
+          fi
+      - uses: actions/upload-artifact@v2
+        with:
+          name: cross_build_artifact
+          path: |
+            piping-server-*.tar.gz
+            piping-server-*.zip
+
+  linux_operational_test:
+    needs:
+      - cross_build
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Download the artifact (cross build)
+      uses: actions/download-artifact@v2
+      with:
+        name: cross_build_artifact
+    - name: Extract binary
+      run: tar xf piping-server-x86_64-unknown-linux-musl.tar.gz
     - name: Operational test
       run: |
         set -xeu
         # Create certificates
         mkdir ssl_certs && cd ssl_certs && openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -sha256 -nodes --subj '/CN=localhost/' && cd -
         # Run a server
-        ./target/x86_64-unknown-linux-musl/release/piping-server --http-port=8181 --enable-https --https-port=8443 --crt-path=./ssl_certs/server.crt --key-path=./ssl_certs/server.key &
+        ./piping-server-x86_64-unknown-linux-musl/piping-server --http-port=8181 --enable-https --https-port=8443 --crt-path=./ssl_certs/server.crt --key-path=./ssl_certs/server.key &
         sleep 3
 
         # Transfer data over HTTP
@@ -60,37 +114,28 @@ jobs:
         diff <(cat /tmp/500M.dat) <(curl localhost:8181/mypath3)
         rm /tmp/500M.dat
 
-    - name: Archive
-      run: |
-        set -eux
-        mkdir piping-server-x86-64-linux
-        cp target/x86_64-unknown-linux-musl/release/piping-server piping-server-x86-64-linux
-        zip -r piping-server-x86-64-linux.zip piping-server-x86-64-linux
-        tar czf piping-server-x86-64-linux.tar.gz piping-server-x86-64-linux
-    - name: Upload Linux executables as artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: ${{ github.sha }}-linux-artifacts
-        path: piping-server-x86-64-linux.*
-
   build_for_mac:
-    runs-on: macOS-10.15
+    strategy:
+      matrix:
+        target:
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+    runs-on: macOS-11
     steps:
     - uses: actions/checkout@v2
-    - run: cargo test -- --color=always --nocapture
-    - run: cargo build --release
-    - name: Archive
+    - run: rustup target add ${{ matrix.target }}
+    - run: cargo build --target=${{ matrix.target }} --release --locked
+    - name: Archive binary
       run: |
-        set -eux
-        mkdir piping-server-x86-64-apple-darwin
-        cp target/release/piping-server piping-server-x86-64-apple-darwin
-        zip -r piping-server-x86-64-apple-darwin.zip piping-server-x86-64-apple-darwin
-        tar czf piping-server-x86-64-apple-darwin.tar.gz piping-server-x86-64-apple-darwin
-    - name: Upload macOS executables as artifacts
-      uses: actions/upload-artifact@v2
+        set -eu
+        mkdir ./piping-server-${{ matrix.target }}
+        cp ./target/${{ matrix.target }}/release/piping-server ./piping-server-${{ matrix.target }}
+        tar zcf ./piping-server-${{ matrix.target }}.tar.gz ./piping-server-${{ matrix.target }}
+    - uses: actions/upload-artifact@v2
       with:
-        name: ${{ github.sha }}-mac-artifacts
-        path: piping-server-x86-64-apple-darwin.*
+        name: mac_build_artifact
+        path: |
+          piping-server-*.tar.gz
 
   docker:
     runs-on: ubuntu-18.04
@@ -146,34 +191,38 @@ jobs:
         docker rm -f piping
 
   release_if_tag_exits:
-    needs: [build_for_linux_and_operational_test, build_for_mac]
+    needs:
+      - cargo_fmt
+      - cargo_test
+      - linux_operational_test
+      - build_for_mac
     runs-on: ubuntu-18.04
     steps:
-    - name: Extract tag name
-      shell: bash
-      run: echo "##[set-output name=tag;]$(echo ${GITHUB_REF#refs/tags/})"
-      id: extract_tag
-    # NOTE: checkout is needed to use hub command
-    - uses: actions/checkout@v2
-    - name: Download the artifact (Linux)
+    - name: Download the artifact (cross build)
       uses: actions/download-artifact@v2
       with:
-        name: ${{ github.sha }}-linux-artifacts
+        name: cross_build_artifact
+        path: ./publish_dir
     - name: Download the artifact (macOS)
       uses: actions/download-artifact@v2
       with:
-        name: ${{ github.sha }}-mac-artifacts
-    - run: ls -la
-    # (base: https://github.com/actions/upload-release-asset/issues/28#issuecomment-617208601)
+        name: mac_build_artifact
+        path: ./publish_dir
+    - run: ls -la ./publish_dir
     - name: Release
       if: contains(github.ref, 'refs/tags/')
       run: |
         set -eux
-        hub release create \
-          -a piping-server-x86-64-linux.tar.gz \
-          -a piping-server-x86-64-linux.zip \
-          -a piping-server-x86-64-apple-darwin.tar.gz \
-          -a piping-server-x86-64-apple-darwin.zip \
-          -m "Release ${{ steps.extract_tag.outputs.tag }}" ${{ steps.extract_tag.outputs.tag }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Show and create checksums
+        (cd publish_dir && sha256sum * | tee /dev/stderr > sha256sums.txt)
+        TAG=$(echo $GITHUB_REF | cut -d / -f 3)
+        VERSION=$TAG
+        REPO=$(echo $GITHUB_REPOSITORY | cut -d / -f 2)
+        curl -L https://github.com/tcnksm/ghr/releases/download/v0.14.0/ghr_v0.14.0_linux_amd64.tar.gz | tar xzf -
+        ./ghr_v0.14.0_linux_amd64/ghr -t ${{ secrets.GITHUB_TOKEN }} -u ${GITHUB_ACTOR} -r ${REPO} -c ${GITHUB_SHA} -delete ${VERSION} ./publish_dir
+
+  heroku_docker_build:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: docker build -t piping-server-rust -f ./heroku.dockerfile .

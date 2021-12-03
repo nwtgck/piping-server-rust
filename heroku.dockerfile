@@ -5,10 +5,10 @@ FROM nwtgck/rust-musl-builder:1.56.1 as build
 # Copy to current directory and change the owner
 COPY --chown=rust:rust . ./
 # Build
-RUN cargo build --release
+RUN cargo build --release --locked
 
 
-FROM alpine:3.14.3
+FROM alpine:3.15.0
 LABEL maintainer="Ryo Ota <nwtgck@nwtgck.org>"
 
 # Copy executable
