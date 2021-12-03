@@ -71,9 +71,7 @@ jobs:
       with:
         name: cross_build_artifact
     - name: Extract binary
-      run: |
-        ls -la
-        tar xf piping-server-x86_64-unknown-linux-musl.tar.gz
+      run: tar xf piping-server-x86_64-unknown-linux-musl.tar.gz
     - name: Operational test
       run: |
         set -xeu
