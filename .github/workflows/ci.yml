@@ -213,19 +213,17 @@ jobs:
         name: mac_build_artifact
         path: ./publish_dir
     - run: ls -la
-    # (base: https://github.com/actions/upload-release-asset/issues/28#issuecomment-617208601)
     - name: Release
       if: contains(github.ref, 'refs/tags/')
       run: |
         set -eux
-        hub release create \
-          -a piping-server-x86-64-linux.tar.gz \
-          -a piping-server-x86-64-linux.zip \
-          -a piping-server-x86-64-apple-darwin.tar.gz \
-          -a piping-server-x86-64-apple-darwin.zip \
-          -m "Release ${{ steps.extract_tag.outputs.tag }}" ${{ steps.extract_tag.outputs.tag }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Show and create checksums
+        (cd publish_dir && sha256sum * | tee /dev/stderr > sha256sums.txt)
+        TAG=$(echo $GITHUB_REF | cut -d / -f 3)
+        VERSION=$TAG
+        REPO=$(echo $GITHUB_REPOSITORY | cut -d / -f 2)
+        curl -L https://github.com/tcnksm/ghr/releases/download/v0.14.0/ghr_v0.14.0_linux_amd64.tar.gz | tar xzf -
+        ./ghr_v0.14.0_linux_amd64/ghr -t ${{ secrets.GITHUB_TOKEN }} -u ${GITHUB_ACTOR} -r ${REPO} -c ${GITHUB_SHA} -delete ${VERSION} ./publish_dir
 
   heroku_docker_build:
     runs-on: ubuntu-18.04
