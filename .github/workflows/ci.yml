@@ -131,7 +131,7 @@ jobs:
     needs:
       - cargo_fmt
       - cargo_test
-      - build_for_linux_and_operational_test
+      - linux_operational_test
       - build_for_mac
     runs-on: ubuntu-18.04
     steps:
