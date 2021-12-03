@@ -227,7 +227,7 @@ jobs:
         target:
           - x86_64-apple-darwin
           - aarch64-apple-darwin
-    runs-on: macOS-11.6
+    runs-on: macOS-11
     steps:
       - uses: actions/checkout@v2
       - run: rustup target add ${{ matrix.target }}
