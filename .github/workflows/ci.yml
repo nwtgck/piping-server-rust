@@ -20,22 +20,25 @@ jobs:
     - uses: actions/checkout@v2
     - run: cargo test -- --color=always --nocapture
 
-  build_for_linux_and_operational_test:
+  linux_operational_test:
+    needs:
+      - cross_build
     runs-on: ubuntu-18.04
     steps:
+    - name: Download the artifact (cross build)
+      uses: actions/download-artifact@v2
+      with:
+        name: cross_build_artifact
     - uses: actions/checkout@v2
-    - name: Release build
-      run: |
-        set -eux
-        docker run --rm -v "$(pwd)":/home/rust/src nwtgck/rust-musl-builder:1.56.1 sh -c 'sudo chown -R rust:rust . && cargo build --release --locked'
-        sudo chown -R $USER:$USER .
+    - name: Extract binary
+      run: tar xf piping-server-x86_64-unknown-linux-musl.tar.gz
     - name: Operational test
       run: |
         set -xeu
         # Create certificates
         mkdir ssl_certs && cd ssl_certs && openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -sha256 -nodes --subj '/CN=localhost/' && cd -
         # Run a server
-        ./target/x86_64-unknown-linux-musl/release/piping-server --http-port=8181 --enable-https --https-port=8443 --crt-path=./ssl_certs/server.crt --key-path=./ssl_certs/server.key &
+        ./piping-server-x86_64-unknown-linux-musl/piping-server --http-port=8181 --enable-https --https-port=8443 --crt-path=./ssl_certs/server.crt --key-path=./ssl_certs/server.key &
         sleep 3
 
         # Transfer data over HTTP
@@ -70,19 +73,6 @@ jobs:
         curl -F myfile=@/tmp/500M.dat localhost:8181/mypath3 &
         diff <(cat /tmp/500M.dat) <(curl localhost:8181/mypath3)
         rm /tmp/500M.dat
-
-    - name: Archive
-      run: |
-        set -eux
-        mkdir piping-server-x86-64-linux
-        cp target/x86_64-unknown-linux-musl/release/piping-server piping-server-x86-64-linux
-        zip -r piping-server-x86-64-linux.zip piping-server-x86-64-linux
-        tar czf piping-server-x86-64-linux.tar.gz piping-server-x86-64-linux
-    - name: Upload Linux executables as artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: ${{ github.sha }}-linux-artifacts
-        path: piping-server-x86-64-linux.*
 
   docker:
     runs-on: ubuntu-18.04
@@ -151,14 +141,14 @@ jobs:
       id: extract_tag
     # NOTE: checkout is needed to use hub command
     - uses: actions/checkout@v2
-    - name: Download the artifact (Linux)
+    - name: Download the artifact (cross build)
       uses: actions/download-artifact@v2
       with:
-        name: ${{ github.sha }}-linux-artifacts
+        name: cross_build_artifact
     - name: Download the artifact (macOS)
       uses: actions/download-artifact@v2
       with:
-        name: ${{ github.sha }}-mac-artifacts
+        name: mac_build_artifact
     - run: ls -la
     # (base: https://github.com/actions/upload-release-asset/issues/28#issuecomment-617208601)
     - name: Release
