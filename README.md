@@ -29,35 +29,47 @@ docker run -p 8181:8080 nwtgck/piping-server-rust
 
 ```bash
 # Download and extract
-curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.10.1/piping-server-x86-64-linux.tar.gz | tar xzf -
+curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.10.2/piping-server-x86_64-unknown-linux-musl.tar.gz | tar xzf -
 # Run on 8181 port
-./piping-server-x86-64-linux/piping-server --http-port=8181
+./piping-server-x86_64-unknown-linux-musl/piping-server --http-port=8181
 ```
 
-### Way 3: Binary for macOS
+### Way 3: Binary for macOS (Intel)
 
 ```bash
 # Download and extract
-curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.10.1/piping-server-x86-64-apple-darwin.tar.gz | tar xzf -
+curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.10.2/piping-server-x86_64-apple-darwin.tar.gz | tar xzf -
 # Run on 8181 port
-./piping-server-x86-64-apple-darwin/piping-server --http-port=8181
+./piping-server-x86_64-apple-darwin/piping-server --http-port=8181
 ```
 
-Executable files are available on [GitHub Release](https://github.com/nwtgck/piping-server-rust/releases) for Linux and macOS. The executable file for Linux is portable because it is statically linked.
+### Way 4: Binary for macOS (ARM)
 
-### Way4: Heroku
+```bash
+curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.10.2/piping-server-aarch64-apple-darwin.tar.gz | tar xzf -
+# Run on 8181 port
+./piping-server-aarch64-apple-darwin/piping-server --http-port=8181
+```
+
+### Way 5: Windows
+
+<https://github.com/nwtgck/piping-server-rust/releases/download/v0.10.2/piping-server-x86_64-pc-windows-gnu.zip>  
+
+Executable files are available on [GitHub Release](https://github.com/nwtgck/piping-server-rust/releases).
+
+### Way 6: Heroku
 
 Click the button bellow to deploy.
 
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
-### Way5: Replit
+### Way 7: Replit
 
 Click <kbd>Fork</kbd> button in the link below and fork it.
 
 <https://replit.com/@nwtgck/piping-rust>
 
-### Way 6: Build and run by yourself
+### Way 8: Build and run by yourself
 You can clone, build and run `piping-server` as follows.
 
 ```bash
