@@ -198,10 +198,6 @@ jobs:
       - build_for_mac
     runs-on: ubuntu-18.04
     steps:
-    - name: Extract tag name
-      shell: bash
-      run: echo "##[set-output name=tag;]$(echo ${GITHUB_REF#refs/tags/})"
-      id: extract_tag
     - name: Download the artifact (cross build)
       uses: actions/download-artifact@v2
       with:
