@@ -84,24 +84,6 @@ jobs:
         name: ${{ github.sha }}-linux-artifacts
         path: piping-server-x86-64-linux.*
 
-  build_for_mac:
-    runs-on: macOS-10.15
-    steps:
-    - uses: actions/checkout@v2
-    - run: cargo build --release --locked
-    - name: Archive
-      run: |
-        set -eux
-        mkdir piping-server-x86-64-apple-darwin
-        cp target/release/piping-server piping-server-x86-64-apple-darwin
-        zip -r piping-server-x86-64-apple-darwin.zip piping-server-x86-64-apple-darwin
-        tar czf piping-server-x86-64-apple-darwin.tar.gz piping-server-x86-64-apple-darwin
-    - name: Upload macOS executables as artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: ${{ github.sha }}-mac-artifacts
-        path: piping-server-x86-64-apple-darwin.*
-
   docker:
     runs-on: ubuntu-18.04
     steps:
@@ -222,7 +204,7 @@ jobs:
         run: curl -L https://github.com/rust-embedded/cross/releases/download/v0.2.1/cross-v0.2.1-x86_64-unknown-linux-gnu.tar.gz | tar xzf -
       - run: ./cross build --target=${{ matrix.target }} --release --locked
       - name: Archive binary
-        run: |
+        run: &archive_binary |
           set -eu
           mkdir ./piping-server-${{ matrix.target }}
           if [[ "${{ matrix.target }}" == *"-windows-"* ]]; then
@@ -238,3 +220,21 @@ jobs:
           path: |
             piping-server-*.tar.gz
             piping-server-*.zip
+
+  build_for_mac:
+    strategy:
+      matrix:
+        target:
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+    runs-on: macOS-10.15
+    steps:
+      - uses: actions/checkout@v2
+      - run: cargo build --target=${{ matrix.target }} --release --locked
+      - name: Archive binary
+        run: *archive_binary
+      - uses: actions/upload-artifact@v2
+        with:
+          name: mac_build_artifact
+          path: |
+            piping-server-*.tar.gz
