@@ -70,7 +70,6 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: cross_build_artifact
-    - uses: actions/checkout@v2
     - name: Extract binary
       run: |
         ls -la
