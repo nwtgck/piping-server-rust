@@ -230,6 +230,7 @@ jobs:
     runs-on: macOS-10.15
     steps:
       - uses: actions/checkout@v2
+      - run: rustup target add ${{ matrix.target }}
       - run: cargo build --target=${{ matrix.target }} --release --locked
       - name: Archive binary
         run: |
