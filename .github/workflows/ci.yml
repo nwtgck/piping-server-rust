@@ -225,10 +225,16 @@ jobs:
         run: |
           set -eu
           mkdir ./piping-server-${{ matrix.target }}
-          cp ./target/${{ matrix.target }}/release/piping-server ./piping-server-${{ matrix.target }}
-          tar zcf ./piping-server-${{ matrix.target }}.tar.gz ./piping-server-${{ matrix.target }}
+          if [[ "${{ matrix.target }}" == *"-windows-"* ]]; then
+            cp ./target/${{ matrix.target }}/release/piping-server.exe ./piping-server-${{ matrix.target }}
+            zip -r ./piping-server-${{ matrix.target }}.zip ./piping-server-${{ matrix.target }}
+          else
+            cp ./target/${{ matrix.target }}/release/piping-server ./piping-server-${{ matrix.target }}
+            tar zcf ./piping-server-${{ matrix.target }}.tar.gz ./piping-server-${{ matrix.target }}
+          fi
       - uses: actions/upload-artifact@v2
         with:
           name: cross_build_artifact
           path: |
             piping-server-*.tar.gz
+            piping-server-*.zip
