@@ -208,7 +208,7 @@ jobs:
       with:
         name: mac_build_artifact
         path: ./publish_dir
-    - run: ls -la
+    - run: ls -la ./publish_dir
     - name: Release
       if: contains(github.ref, 'refs/tags/')
       run: |
