@@ -46,6 +46,7 @@ curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.10.2/p
 ### Way 4: Binary for macOS (ARM)
 
 ```bash
+# Download and extract
 curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.10.2/piping-server-aarch64-apple-darwin.tar.gz | tar xzf -
 # Run on 8181 port
 ./piping-server-aarch64-apple-darwin/piping-server --http-port=8181
