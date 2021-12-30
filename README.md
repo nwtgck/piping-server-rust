@@ -43,7 +43,7 @@ curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.10.2/p
 ./piping-server-x86_64-apple-darwin/piping-server --http-port=8181
 ```
 
-### Way 4: Binary for macOS (ARM)
+### Way 4: Binary for macOS (Apple Silicon)
 
 ```bash
 # Download and extract
