@@ -86,19 +86,18 @@ cargo build --release
 ### Server-side help
 
 ```txt
+piping-server 0.10.2
 Piping Server in Rust
 
 USAGE:
-    piping-server [FLAGS] [OPTIONS]
-
-FLAGS:
-        --enable-https    Enable HTTPS
-    -h, --help            Prints help information
-    -V, --version         Prints version information
+    piping-server [OPTIONS]
 
 OPTIONS:
-        --crt-path <crt-path>        Certification path
-        --http-port <http-port>      HTTP port [default: 8080]
-        --https-port <https-port>    HTTPS port
-        --key-path <key-path>        Private key path
+        --http-port <HTTP_PORT>      HTTP port [default: 8080]
+        --enable-https               Enable HTTPS
+        --https-port <HTTPS_PORT>    HTTPS port
+        --crt-path <CRT_PATH>        Certification path
+        --key-path <KEY_PATH>        Private key path
+    -h, --help                       Print help information
+    -V, --version                    Print version information
 ```
