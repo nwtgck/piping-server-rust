@@ -51,6 +51,7 @@ pub fn no_script_html(path: &str) -> String {
 <head>
   <title>File transfer without JavaScript</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8">
   <style>
     h3 {{
       margin-top: 2em;

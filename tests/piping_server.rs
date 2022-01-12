@@ -103,14 +103,18 @@ async fn f() -> Result<(), BoxError> {
 
     let (parts, body) = res.into_parts();
 
-    // Body should contains "Piping"
     let body_string = String::from_utf8(read_all_body(body).await)?;
+    // Body should contain "Piping"
     assert!(body_string.contains("Piping"));
+    // Body should specify charset
+    assert!(body_string
+        .to_lowercase()
+        .contains(r#"<meta charset="utf-8">"#));
 
     // Content-Type is "text/html"
     assert_eq!(
         get_header_value(&parts.headers, "content-type"),
-        Some("text/html; charset=utf-8")
+        Some("text/html")
     );
 
     serve.shutdown().await?;
@@ -132,14 +136,18 @@ async fn f() -> Result<(), BoxError> {
 
     let (parts, body) = res.into_parts();
 
-    // Body should contains "Piping"
     let body_string = String::from_utf8(read_all_body(body).await)?;
+    // Body should contain "Piping"
     assert!(body_string.contains("action=\"mypath\""));
+    // Body should specify charset
+    assert!(body_string
+        .to_lowercase()
+        .contains(r#"<meta charset="utf-8">"#));
 
     // Content-Type is "text/html"
     assert_eq!(
         get_header_value(&parts.headers, "content-type"),
-        Some("text/html; charset=utf-8")
+        Some("text/html")
     );
 
     serve.shutdown().await?;

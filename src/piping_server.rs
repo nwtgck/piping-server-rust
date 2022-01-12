@@ -83,7 +83,7 @@ impl PipingServer {
                     reserved_paths::INDEX => {
                         let res = Response::builder()
                             .status(200)
-                            .header("Content-Type", "text/html; charset=utf-8")
+                            .header("Content-Type", "text/html")
                             .header("Access-Control-Allow-Origin", "*")
                             .body(Body::from(include_str!("../resource/index.html")))
                             .unwrap();
@@ -104,7 +104,7 @@ impl PipingServer {
                         let html = dynamic_resources::no_script_html(&path);
                         let res = Response::builder()
                             .status(200)
-                            .header("Content-Type", "text/html; charset=utf-8")
+                            .header("Content-Type", "text/html")
                             .header("Access-Control-Allow-Origin", "*")
                             .body(Body::from(html))
                             .unwrap();
