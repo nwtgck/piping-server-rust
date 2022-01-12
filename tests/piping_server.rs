@@ -355,6 +355,10 @@ async fn f() -> Result<(), BoxError> {
 
     assert_eq!(parts.status, http::StatusCode::BAD_REQUEST);
     assert_eq!(
+        get_header_value(&parts.headers, "content-type"),
+        Some("text/plain")
+    );
+    assert_eq!(
         get_header_value(&parts.headers, "access-control-allow-origin"),
         Some("*")
     );
@@ -380,6 +384,10 @@ async fn f() -> Result<(), BoxError> {
         let (parts, _body) = res.into_parts();
 
         assert_eq!(parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&parts.headers, "content-type"),
+            Some("text/plain")
+        );
         assert_eq!(
             get_header_value(&parts.headers, "access-control-allow-origin"),
             Some("*")
@@ -407,6 +415,10 @@ async fn f() -> Result<(), BoxError> {
     let send_res = client.request(send_req).await?;
     let (send_res_parts, _send_res_body) = send_res.into_parts();
     assert_eq!(send_res_parts.status, http::StatusCode::OK);
+    assert_eq!(
+        get_header_value(&send_res_parts.headers, "content-type"),
+        Some("text/plain")
+    );
     assert_eq!(
         get_header_value(&send_res_parts.headers, "access-control-allow-origin"),
         Some("*")
@@ -486,6 +498,10 @@ async fn f() -> Result<(), BoxError> {
     let (send_res_parts, _send_res_body) = send_res.into_parts();
     assert_eq!(send_res_parts.status, http::StatusCode::OK);
     assert_eq!(
+        get_header_value(&send_res_parts.headers, "content-type"),
+        Some("text/plain")
+    );
+    assert_eq!(
         get_header_value(&send_res_parts.headers, "access-control-allow-origin"),
         Some("*")
     );
@@ -523,6 +539,8 @@ async fn f() -> Result<(), BoxError> {
     serve.shutdown_tx.send(()).expect("shutdown failed");
     Ok(())
 }
+
+// TODO: add tests when sender or receiver receive 400
 
 #[it("should pass X-Piping and attach Access-Control-Expose-Headers: X-Piping when sending with X-Piping")]
 async fn f() -> Result<(), BoxError> {

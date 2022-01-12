@@ -172,6 +172,7 @@ impl PipingServer {
                             // Reject Service Worker registration
                             let res = Response::builder()
                                 .status(400)
+                                .header("Content-Type", "text/plain")
                                 .header("Access-Control-Allow-Origin", "*")
                                 .body(Body::from(
                                     "[ERROR] Service Worker registration is rejected.\n",
@@ -187,6 +188,7 @@ impl PipingServer {
                     if receiver_connected {
                         let res = Response::builder()
                             .status(400)
+                            .header("Content-Type", "text/plain")
                             .header("Access-Control-Allow-Origin", "*")
                             .body(Body::from(format!(
                                 "[ERROR] Another receiver has been connected on '{}'.\n",
@@ -229,6 +231,7 @@ impl PipingServer {
                         // Reject reserved path sending
                         let res = Response::builder()
                             .status(400)
+                            .header("Content-Type", "text/plain")
                             .header("Access-Control-Allow-Origin", "*")
                             .body(Body::from(format!(
                                 "[ERROR] Cannot send to the reserved path '{}'. (e.g. '/mypath123')\n",
@@ -245,6 +248,7 @@ impl PipingServer {
                         // Reject reserved path sending
                         let res = Response::builder()
                             .status(400)
+                            .header("Content-Type", "text/plain")
                             .header("Access-Control-Allow-Origin", "*")
                             .body(Body::from(format!(
                                 "[ERROR] Content-Range is not supported for now in {}\n",
@@ -259,6 +263,7 @@ impl PipingServer {
                     if sender_connected {
                         let res = Response::builder()
                             .status(400)
+                            .header("Content-Type", "text/plain")
                             .header("Access-Control-Allow-Origin", "*")
                             .body(Body::from(format!(
                                 "[ERROR] Another sender has been connected on '{}'.\n",
@@ -274,6 +279,7 @@ impl PipingServer {
                     >();
                     let body = hyper::body::Body::wrap_stream(rx.flatten());
                     let sender_res = Response::builder()
+                        .header("Content-Type", "text/plain")
                         .header("Access-Control-Allow-Origin", "*")
                         .body(body)
                         .unwrap();
