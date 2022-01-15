@@ -11,7 +11,6 @@ fn escape_html_attribute(s: &str) -> String {
 
 pub fn help(base_url: &Url) -> String {
     let version: &'static str = env!("CARGO_PKG_VERSION");
-    // base_uri.path().
     return std::format!(
         r#"Help for Piping Server (Rust) {version}
 (Repository: https://github.com/nwtgck/piping-server-rust)
