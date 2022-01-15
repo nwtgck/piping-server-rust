@@ -47,6 +47,11 @@ async fn main() -> std::io::Result<()> {
     // Set default log level
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
+    log::info!(
+        "Piping Server (Rust) {version}",
+        version = env!("CARGO_PKG_VERSION")
+    );
+
     let https_server = if args.enable_https {
         if let (Some(https_port), Some(crt_path), Some(key_path)) =
             (args.https_port, args.crt_path, args.key_path)
