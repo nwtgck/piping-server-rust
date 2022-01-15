@@ -172,6 +172,8 @@ async fn f() -> Result<(), BoxError> {
     // Body should contains version
     let body_string = String::from_utf8(read_all_body(body).await)?;
     assert!(body_string.contains(env!("CARGO_PKG_VERSION")));
+    // Body should contains case-insensitive "rust"
+    assert!(body_string.to_lowercase().contains("rust"));
 
     assert_eq!(
         get_header_value(&parts.headers, "content-type"),
