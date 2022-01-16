@@ -76,7 +76,7 @@ jobs:
       run: |
         set -xeu
         # Create certificates
-        mkdir ssl_certs && cd ssl_certs && openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -sha256 -nodes --subj '/CN=localhost/' && cd -
+        (mkdir ssl_certs && cd ssl_certs && openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -sha256 -nodes --subj '/CN=localhost/')
         # Run a server
         ./piping-server-x86_64-unknown-linux-musl/piping-server --http-port=8181 --enable-https --https-port=8443 --crt-path=./ssl_certs/server.crt --key-path=./ssl_certs/server.key &
         sleep 3
@@ -146,7 +146,7 @@ jobs:
       run: |
         set -eux
         # Create certificates
-        mkdir ssl_certs && cd ssl_certs && openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -sha256 -nodes --subj '/CN=localhost/' && cd -
+        (mkdir ssl_certs && cd ssl_certs && openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -sha256 -nodes --subj '/CN=localhost/')
         # Run a server
         docker run -d --name=piping -p 8181:80 -p 8443:443 -v $PWD/ssl_certs:/ssl_certs piping-server-rust --http-port=80 --enable-https --https-port=443 --crt-path=/ssl_certs/server.crt --key-path=/ssl_certs/server.key
         # Wait for server running
