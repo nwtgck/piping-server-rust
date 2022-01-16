@@ -5,6 +5,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.11.0] - 2022-01-16
+### Changed
+* (Docker) Use Rust version 1.57.0 in build
+* Update dependencies
+* Update --help output by changing internal library
+* Respond `Content-Type: text/html` instead of `text/html; charset=utf-8` because old browser does not recognize `; charset=utf-8`
+* Add `<meta charset="UTF-8">` to /noscript page
+* Add `Content-Type: text/plain` header to sender's response and receiver's error responses because some old browsers do not display `\n`
+* Log Piping Server version
+* Change /version and /help formats
+* Show version in /noscript page
+
 ## [0.10.2] - 2021-12-03
 ### Added
 * (CI) Release multiple binaries including ARM
@@ -186,7 +198,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.10.2...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.10.2...v0.11.0
 [0.10.2]: https://github.com/nwtgck/piping-server-rust/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.9.1...v0.10.0
