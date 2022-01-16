@@ -11,9 +11,8 @@ fn escape_html_attribute(s: &str) -> String {
 
 pub fn help(base_url: &Url) -> String {
     let version: &'static str = env!("CARGO_PKG_VERSION");
-    // base_uri.path().
     return std::format!(
-        r#"Help for Piping Server in Rust (Hyper) {version}
+        r#"Help for Piping Server (Rust) {version}
 (Repository: https://github.com/nwtgck/piping-server-rust)
 
 ======= Get  =======
@@ -51,6 +50,7 @@ pub fn no_script_html(path: &str) -> String {
 <head>
   <title>File transfer without JavaScript</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8">
   <style>
     h3 {{
       margin-top: 2em;
@@ -72,6 +72,7 @@ pub fn no_script_html(path: &str) -> String {
     <input type="submit" value="Send" {disabled}>
   </form>
   <hr>
+  Version {version} (Rust)<br>
   Piping Server:
   <a href="https://github.com/nwtgck/piping-server-rust">
     https://github.com/nwtgck/piping-server-rust
@@ -84,5 +85,6 @@ pub fn no_script_html(path: &str) -> String {
         path_query = piping_server::NO_SCRIPT_PATH_QUERY_PARAMETER_NAME,
         escaped_path = escape_html_attribute(path),
         disabled = if path.is_empty() { "disabled" } else { "" },
+        version = env!("CARGO_PKG_VERSION"),
     );
 }

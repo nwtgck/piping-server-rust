@@ -103,14 +103,18 @@ async fn f() -> Result<(), BoxError> {
 
     let (parts, body) = res.into_parts();
 
-    // Body should contains "Piping"
     let body_string = String::from_utf8(read_all_body(body).await)?;
+    // Body should contain "Piping"
     assert!(body_string.contains("Piping"));
+    // Body should specify charset
+    assert!(body_string
+        .to_lowercase()
+        .contains(r#"<meta charset="utf-8">"#));
 
     // Content-Type is "text/html"
     assert_eq!(
         get_header_value(&parts.headers, "content-type"),
-        Some("text/html; charset=utf-8")
+        Some("text/html")
     );
 
     serve.shutdown().await?;
@@ -132,14 +136,18 @@ async fn f() -> Result<(), BoxError> {
 
     let (parts, body) = res.into_parts();
 
-    // Body should contains "Piping"
     let body_string = String::from_utf8(read_all_body(body).await)?;
+    // Body should contain "Piping"
     assert!(body_string.contains("action=\"mypath\""));
+    // Body should specify charset
+    assert!(body_string
+        .to_lowercase()
+        .contains(r#"<meta charset="utf-8">"#));
 
     // Content-Type is "text/html"
     assert_eq!(
         get_header_value(&parts.headers, "content-type"),
-        Some("text/html; charset=utf-8")
+        Some("text/html")
     );
 
     serve.shutdown().await?;
@@ -164,6 +172,8 @@ async fn f() -> Result<(), BoxError> {
     // Body should contains version
     let body_string = String::from_utf8(read_all_body(body).await)?;
     assert!(body_string.contains(env!("CARGO_PKG_VERSION")));
+    // Body should contains case-insensitive "rust"
+    assert!(body_string.to_lowercase().contains("rust"));
 
     assert_eq!(
         get_header_value(&parts.headers, "content-type"),
@@ -347,6 +357,10 @@ async fn f() -> Result<(), BoxError> {
 
     assert_eq!(parts.status, http::StatusCode::BAD_REQUEST);
     assert_eq!(
+        get_header_value(&parts.headers, "content-type"),
+        Some("text/plain")
+    );
+    assert_eq!(
         get_header_value(&parts.headers, "access-control-allow-origin"),
         Some("*")
     );
@@ -372,6 +386,10 @@ async fn f() -> Result<(), BoxError> {
         let (parts, _body) = res.into_parts();
 
         assert_eq!(parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&parts.headers, "content-type"),
+            Some("text/plain")
+        );
         assert_eq!(
             get_header_value(&parts.headers, "access-control-allow-origin"),
             Some("*")
@@ -399,6 +417,10 @@ async fn f() -> Result<(), BoxError> {
     let send_res = client.request(send_req).await?;
     let (send_res_parts, _send_res_body) = send_res.into_parts();
     assert_eq!(send_res_parts.status, http::StatusCode::OK);
+    assert_eq!(
+        get_header_value(&send_res_parts.headers, "content-type"),
+        Some("text/plain")
+    );
     assert_eq!(
         get_header_value(&send_res_parts.headers, "access-control-allow-origin"),
         Some("*")
@@ -478,6 +500,10 @@ async fn f() -> Result<(), BoxError> {
     let (send_res_parts, _send_res_body) = send_res.into_parts();
     assert_eq!(send_res_parts.status, http::StatusCode::OK);
     assert_eq!(
+        get_header_value(&send_res_parts.headers, "content-type"),
+        Some("text/plain")
+    );
+    assert_eq!(
         get_header_value(&send_res_parts.headers, "access-control-allow-origin"),
         Some("*")
     );
@@ -515,6 +541,8 @@ async fn f() -> Result<(), BoxError> {
     serve.shutdown_tx.send(()).expect("shutdown failed");
     Ok(())
 }
+
+// TODO: add tests when sender or receiver receive 400
 
 #[it("should pass X-Piping and attach Access-Control-Expose-Headers: X-Piping when sending with X-Piping")]
 async fn f() -> Result<(), BoxError> {

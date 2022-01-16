@@ -1,9 +1,9 @@
+use clap::Parser;
 use core::convert::Infallible;
 use futures::stream::{StreamExt, TryStreamExt};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::Server;
 use std::sync::{Arc, RwLock};
-use structopt::StructOpt;
 use tokio::net::TcpListener;
 use tokio_rustls::TlsAcceptor;
 
@@ -12,31 +12,32 @@ use piping_server::req_res_handler::req_res_handler;
 use piping_server::util;
 
 /// Piping Server in Rust
-#[derive(StructOpt, Debug)]
-#[structopt(name = "piping-server")]
-#[structopt(rename_all = "kebab-case")]
-struct Opt {
+#[derive(clap::Parser, Debug)]
+#[clap(name = "piping-server")]
+#[clap(about, version)]
+#[clap(global_setting(clap::AppSettings::DeriveDisplayOrder))]
+struct Args {
     /// HTTP port
-    #[structopt(long, default_value = "8080")]
+    #[clap(long, default_value = "8080")]
     http_port: u16,
-    #[structopt(long)]
+    #[clap(long)]
     /// Enable HTTPS
     enable_https: bool,
     /// HTTPS port
-    #[structopt(long)]
+    #[clap(long)]
     https_port: Option<u16>,
     /// Certification path
-    #[structopt(long)]
+    #[clap(long)]
     crt_path: Option<String>,
     /// Private key path
-    #[structopt(long)]
+    #[clap(long)]
     key_path: Option<String>,
 }
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    // Parse options
-    let opt = Opt::from_args();
+    // Parse arguments
+    let args = Args::parse();
 
     let mut tcp: TcpListener;
     let tls_cfg_rwlock_arc: Arc<RwLock<Arc<rustls::ServerConfig>>>;
@@ -46,9 +47,14 @@ async fn main() -> std::io::Result<()> {
     // Set default log level
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    let https_server = if opt.enable_https {
+    log::info!(
+        "Piping Server (Rust) {version}",
+        version = env!("CARGO_PKG_VERSION")
+    );
+
+    let https_server = if args.enable_https {
         if let (Some(https_port), Some(crt_path), Some(key_path)) =
-            (opt.https_port, opt.crt_path, opt.key_path)
+            (args.https_port, args.crt_path, args.key_path)
         {
             tls_cfg_rwlock_arc = util::hot_reload_tls_cfg(crt_path, key_path);
 
@@ -105,10 +111,10 @@ async fn main() -> std::io::Result<()> {
             req_res_handler(move |req, res_sender| piping_server.handler(false, req, res_sender));
         futures::future::ok::<_, Infallible>(service_fn(handler))
     });
-    let http_server = Server::bind(&([0, 0, 0, 0], opt.http_port).into()).serve(http_svc);
+    let http_server = Server::bind(&([0, 0, 0, 0], args.http_port).into()).serve(http_svc);
 
-    log::info!("HTTP server is running on {}...", opt.http_port);
-    if let Some(https_port) = opt.https_port {
+    log::info!("HTTP server is running on {}...", args.http_port);
+    if let Some(https_port) = args.https_port {
         log::info!("HTTPS server is running on {:?}...", https_port);
     }
     match futures::future::join(http_server, https_server).await {
