@@ -72,6 +72,7 @@ pub fn no_script_html(path: &str) -> String {
     <input type="submit" value="Send" {disabled}>
   </form>
   <hr>
+  Version {version} (Rust)<br>
   Piping Server:
   <a href="https://github.com/nwtgck/piping-server-rust">
     https://github.com/nwtgck/piping-server-rust
@@ -84,5 +85,6 @@ pub fn no_script_html(path: &str) -> String {
         path_query = piping_server::NO_SCRIPT_PATH_QUERY_PARAMETER_NAME,
         escaped_path = escape_html_attribute(path),
         disabled = if path.is_empty() { "disabled" } else { "" },
+        version = env!("CARGO_PKG_VERSION"),
     );
 }
