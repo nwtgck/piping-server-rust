@@ -86,7 +86,7 @@ cargo build --release
 ### Server-side help
 
 ```txt
-piping-server 0.10.2
+piping-server 0.11.0
 Piping Server in Rust
 
 USAGE:
@@ -98,6 +98,7 @@ OPTIONS:
         --https-port <HTTPS_PORT>    HTTPS port
         --crt-path <CRT_PATH>        Certification path
         --key-path <KEY_PATH>        Private key path
+        --bind-addr <BIND_ADDR>      Bind address [default: 0.0.0.0]
     -h, --help                       Print help information
     -V, --version                    Print version information
 ```
