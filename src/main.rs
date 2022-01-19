@@ -17,6 +17,9 @@ use piping_server::util;
 #[clap(about, version)]
 #[clap(global_setting(clap::AppSettings::DeriveDisplayOrder))]
 struct Args {
+    /// Bind address, either IPv4 or IPv6 (e.g. 127.0.0.1, ::1)
+    #[clap(long, default_value = "0.0.0.0")]
+    host: std::net::IpAddr,
     /// HTTP port
     #[clap(long, default_value = "8080")]
     http_port: u16,
@@ -32,9 +35,6 @@ struct Args {
     /// Private key path
     #[clap(long)]
     key_path: Option<String>,
-    /// Bind address, either IPv4 or IPv6 (e.g. 127.0.0.1, ::1)
-    #[clap(long, default_value = "0.0.0.0")]
-    host: std::net::IpAddr,
 }
 
 #[tokio::main]
