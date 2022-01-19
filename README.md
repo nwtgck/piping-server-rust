@@ -98,7 +98,7 @@ OPTIONS:
         --https-port <HTTPS_PORT>    HTTPS port
         --crt-path <CRT_PATH>        Certification path
         --key-path <KEY_PATH>        Private key path
-        --bind-addr <BIND_ADDR>      Bind address [default: 0.0.0.0]
+        --host <HOST>                Bind address [default: 0.0.0.0]
     -h, --help                       Print help information
     -V, --version                    Print version information
 ```

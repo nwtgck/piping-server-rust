@@ -34,7 +34,7 @@ struct Args {
     key_path: Option<String>,
     /// Bind address
     #[clap(long, default_value = "0.0.0.0")]
-    bind_addr: std::net::IpAddr,
+    host: std::net::IpAddr,
 }
 
 #[tokio::main]
@@ -61,7 +61,7 @@ async fn main() -> std::io::Result<()> {
         {
             tls_cfg_rwlock_arc = util::hot_reload_tls_cfg(crt_path, key_path);
 
-            let addr: std::net::SocketAddr = (args.bind_addr, https_port).into();
+            let addr: std::net::SocketAddr = (args.host, https_port).into();
             // Create a TCP listener via tokio.
             tcp = TcpListener::bind(&addr).await?;
             // Prepare a long-running future stream to accept and serve clients.
@@ -114,7 +114,7 @@ async fn main() -> std::io::Result<()> {
             req_res_handler(move |req, res_sender| piping_server.handler(false, req, res_sender));
         futures::future::ok::<_, Infallible>(service_fn(handler))
     });
-    let http_server = Server::bind(&(args.bind_addr, args.http_port).into()).serve(http_svc);
+    let http_server = Server::bind(&(args.host, args.http_port).into()).serve(http_svc);
 
     log::info!("HTTP server is running on {}...", args.http_port);
     if let Some(https_port) = args.https_port {
