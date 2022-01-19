@@ -32,7 +32,7 @@ struct Args {
     /// Private key path
     #[clap(long)]
     key_path: Option<String>,
-    /// Bind address
+    /// Bind address, either IPv4 or IPv6 (e.g. 127.0.0.1, ::1)
     #[clap(long, default_value = "0.0.0.0")]
     host: std::net::IpAddr,
 }
