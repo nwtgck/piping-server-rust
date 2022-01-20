@@ -86,7 +86,7 @@ cargo build --release
 ### Server-side help
 
 ```txt
-piping-server 0.11.0
+piping-server 0.12.0-SNAPSHOT
 Piping Server in Rust
 
 USAGE:
