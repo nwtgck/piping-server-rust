@@ -173,7 +173,7 @@ pub fn no_script_html(query_params: &HashMap<String, String>) -> String {
     let mode = query_params
         .get(mode_query_param_name)
         .map(|s| s.deref())
-        .unwrap_or_else(|| "");
+        .unwrap_or_else(|| file_mode);
 
     let text_or_file_input = if mode == text_mode {
         std::format!(
