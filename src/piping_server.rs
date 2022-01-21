@@ -85,7 +85,7 @@ impl PipingServer {
                             .status(200)
                             .header("Content-Type", "text/html")
                             .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from(include_str!("../resource/index.html")))
+                            .body(Body::from(dynamic_resources::index()))
                             .unwrap();
                         res_sender.send(res).unwrap();
                         return;
