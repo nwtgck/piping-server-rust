@@ -91,17 +91,14 @@ impl PipingServer {
                         return;
                     }
                     reserved_paths::NO_SCRIPT => {
-                        let path = match req.uri().query() {
+                        let query_params = match req.uri().query() {
                             Some(query) => {
                                 serde_urlencoded::from_str::<HashMap<String, String>>(query)
                                     .unwrap_or_else(|_| HashMap::new())
-                                    .get(NO_SCRIPT_PATH_QUERY_PARAMETER_NAME)
-                                    .map(|s| s.to_string())
-                                    .unwrap_or_else(|| "".to_string())
                             }
-                            None => String::new(),
+                            None => HashMap::new(),
                         };
-                        let html = dynamic_resources::no_script_html(&path);
+                        let html = dynamic_resources::no_script_html(&query_params);
                         let res = Response::builder()
                             .status(200)
                             .header("Content-Type", "text/html")
