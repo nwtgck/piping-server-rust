@@ -239,7 +239,7 @@ pub fn no_script_html(query_params: &HashMap<String, String>) -> String {
 </body>
 </html>
 "#,
-        no_script_path = piping_server::reserved_paths::NO_SCRIPT,
+        no_script_path = &piping_server::reserved_paths::NO_SCRIPT[1..],
         path_query_param_name = path_query_param_name,
         mode_query_param_name = mode_query_param_name,
         file_mode = file_mode,
