@@ -86,13 +86,15 @@ cargo build --release
 ### Server-side help
 
 ```txt
-piping-server 0.10.2
+piping-server 0.12.0
 Piping Server in Rust
 
 USAGE:
     piping-server [OPTIONS]
 
 OPTIONS:
+        --host <HOST>                Bind address, either IPv4 or IPv6 (e.g. 127.0.0.1, ::1)
+                                     [default: 0.0.0.0]
         --http-port <HTTP_PORT>      HTTP port [default: 8080]
         --enable-https               Enable HTTPS
         --https-port <HTTPS_PORT>    HTTPS port

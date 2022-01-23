@@ -5,6 +5,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.12.0] - 2022-01-23
+### Changed
+* Update dependencies
+* Show version in index page
+* Remove `action=""` when path is not filled for valid HTML in /noscript
+
+### Added
+* Add `--host` option to listen on specified address [#215](https://github.com/nwtgck/piping-server-rust/pull/215) by [@ml-](https://github.com/ml-)
+* Support text input mode in /noscript page
+
+### Fixed
+* Remove GET action in /noscript page
+
 ## [0.11.0] - 2022-01-16
 ### Changed
 * (Docker) Use Rust version 1.57.0 in build
@@ -198,7 +211,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.10.2...v0.11.0
 [0.10.2]: https://github.com/nwtgck/piping-server-rust/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.10.0...v0.10.1
