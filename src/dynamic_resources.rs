@@ -200,6 +200,8 @@ pub fn no_script_html(query_params: &HashMap<String, String>) -> String {
         )
     };
 
+    let escaped_path = escape_html_attribute(path);
+
     return std::format!(
         // language=html
         r#"<!DOCTYPE html>
@@ -224,7 +226,7 @@ pub fn no_script_html(query_params: &HashMap<String, String>) -> String {
     <input type="radio" name="{mode_query_param_name}" value="{file_mode}" {file_mode_input_checked}>File
     <input type="radio" name="{mode_query_param_name}" value="{text_mode}" {text_mode_input_checked}>Text<br>
   </form>
-  <form method="POST" action="{escaped_path}" enctype="multipart/form-data">
+  <form method="POST" {post_action} enctype="multipart/form-data">
     {text_or_file_input}
     <h3>Step 3: Send</h3>
     <input type="submit" value="Send" {disabled}>
@@ -245,7 +247,12 @@ pub fn no_script_html(query_params: &HashMap<String, String>) -> String {
         text_mode = text_mode,
         file_mode_input_checked = if mode == file_mode { "checked" } else { "" },
         text_mode_input_checked = if mode == text_mode { "checked" } else { "" },
-        escaped_path = escape_html_attribute(path),
+        escaped_path = escaped_path,
+        post_action = if path.is_empty() {
+            "".to_string()
+        } else {
+            std::format!(r#"action="{escaped_path}""#, escaped_path = escaped_path)
+        },
         text_or_file_input = text_or_file_input,
         disabled = if path.is_empty() { "disabled" } else { "" },
         version = env!("CARGO_PKG_VERSION"),
