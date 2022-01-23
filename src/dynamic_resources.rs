@@ -217,7 +217,7 @@ pub fn no_script_html(query_params: &HashMap<String, String>) -> String {
 </head>
 <body>
   <h2>File transfer without JavaScript</h2>
-  <form method="GET" action="{no_script_path}">
+  <form method="GET">
     <h3>Step 1: Specify path and mode</h3>
     <input name="{path_query_param_name}" value="{escaped_path}" size="30" placeholder='e.g. "abc123", "myimg.png"'>
     <input type="submit" value="Apply"><br>
@@ -239,7 +239,6 @@ pub fn no_script_html(query_params: &HashMap<String, String>) -> String {
 </body>
 </html>
 "#,
-        no_script_path = &piping_server::reserved_paths::NO_SCRIPT[1..],
         path_query_param_name = path_query_param_name,
         mode_query_param_name = mode_query_param_name,
         file_mode = file_mode,
