@@ -21,6 +21,11 @@ pub fn index() -> String {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta charset="UTF-8">
   <style>
+    body {{
+      font-family: "Avenir Next", Helvetica, Arial, sans-serif;
+      font-size: 110%;
+      margin: 1em;
+    }}
     h3 {{
       margin-top: 2em;
       margin-bottom: 0.5em;
@@ -211,6 +216,10 @@ pub fn no_script_html(query_params: &HashMap<String, String>) -> String {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta charset="UTF-8">
   <style>
+    body {{
+      font-family: sans-serif;
+      font-size: 110%;
+    }}
     h3 {{
       margin-top: 2em;
       margin-bottom: 0.5em;
