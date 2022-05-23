@@ -8,7 +8,7 @@ COPY --chown=rust:rust . ./
 RUN cargo build --release --locked
 
 
-FROM alpine:3.15.2
+FROM alpine:3.16.0
 LABEL maintainer="Ryo Ota <nwtgck@nwtgck.org>"
 
 # Copy executable
