@@ -6,15 +6,14 @@ use futures::stream::{Stream, StreamExt, TryStreamExt};
 use http::{Method, Request, Response};
 use hyper::body::Bytes;
 use hyper::Body;
-use serde_urlencoded;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use url::Url;
 
 use crate::dynamic_resources;
 use crate::util::{
-    finish_detectable_stream, one_stream, FinishDetectableStream, HeaderValuesBuilder,
-    OptionHeaderBuilder,
+    finish_detectable_stream, one_stream, query_param_to_hash_map, FinishDetectableStream,
+    HeaderValuesBuilder, OptionHeaderBuilder,
 };
 
 pub mod reserved_paths {
@@ -91,13 +90,7 @@ impl PipingServer {
                         return;
                     }
                     reserved_paths::NO_SCRIPT => {
-                        let query_params = match req.uri().query() {
-                            Some(query) => {
-                                serde_urlencoded::from_str::<HashMap<String, String>>(query)
-                                    .unwrap_or_else(|_| HashMap::new())
-                            }
-                            None => HashMap::new(),
-                        };
+                        let query_params = query_param_to_hash_map(req.uri().query());
                         let html = dynamic_resources::no_script_html(&query_params);
                         let res = Response::builder()
                             .status(200)
@@ -179,6 +172,42 @@ impl PipingServer {
                             return;
                         }
                     }
+                    let query_params = query_param_to_hash_map(req.uri().query());
+                    let n_receivers_result: Result<u32, _> = get_n_receivers_result(&query_params);
+                    if let Err(_) = n_receivers_result {
+                        let res = Response::builder()
+                            .status(400)
+                            .header("Content-Type", "text/plain")
+                            .header("Access-Control-Allow-Origin", "*")
+                            .body(Body::from("[ERROR] Invalid \"n\" query parameter\n"))
+                            .unwrap();
+                        res_sender.send(res).unwrap();
+                        return;
+                    }
+                    let n_receivers = n_receivers_result.unwrap();
+                    if n_receivers <= 0 {
+                        let res = Response::builder()
+                            .status(400)
+                            .header("Content-Type", "text/plain")
+                            .header("Access-Control-Allow-Origin", "*")
+                            .body(Body::from(format!(
+                                "[ERROR] n should > 0, but n = {n_receivers}.\n",
+                                n_receivers = n_receivers
+                            )))
+                            .unwrap();
+                        res_sender.send(res).unwrap();
+                        return;
+                    }
+                    if n_receivers > 1 {
+                        let res = Response::builder()
+                            .status(400)
+                            .header("Content-Type", "text/plain")
+                            .header("Access-Control-Allow-Origin", "*")
+                            .body(Body::from("[ERROR] n > 1 not supported yet.\n"))
+                            .unwrap();
+                        res_sender.send(res).unwrap();
+                        return;
+                    }
                     let receiver_connected: bool =
                         path_to_receiver.read().unwrap().contains_key(path);
                     // If a receiver has been connected already
@@ -251,6 +280,42 @@ impl PipingServer {
                                 "[ERROR] Content-Range is not supported for now in {}\n",
                                 req.method()
                             )))
+                            .unwrap();
+                        res_sender.send(res).unwrap();
+                        return;
+                    }
+                    let query_params = query_param_to_hash_map(req.uri().query());
+                    let n_receivers_result: Result<u32, _> = get_n_receivers_result(&query_params);
+                    if let Err(_) = n_receivers_result {
+                        let res = Response::builder()
+                            .status(400)
+                            .header("Content-Type", "text/plain")
+                            .header("Access-Control-Allow-Origin", "*")
+                            .body(Body::from("[ERROR] Invalid \"n\" query parameter\n"))
+                            .unwrap();
+                        res_sender.send(res).unwrap();
+                        return;
+                    }
+                    let n_receivers = n_receivers_result.unwrap();
+                    if n_receivers <= 0 {
+                        let res = Response::builder()
+                            .status(400)
+                            .header("Content-Type", "text/plain")
+                            .header("Access-Control-Allow-Origin", "*")
+                            .body(Body::from(format!(
+                                "[ERROR] n should > 0, but n = {n_receivers}.\n",
+                                n_receivers = n_receivers
+                            )))
+                            .unwrap();
+                        res_sender.send(res).unwrap();
+                        return;
+                    }
+                    if n_receivers > 1 {
+                        let res = Response::builder()
+                            .status(400)
+                            .header("Content-Type", "text/plain")
+                            .header("Access-Control-Allow-Origin", "*")
+                            .body(Body::from("[ERROR] n > 1 not supported yet.\n"))
                             .unwrap();
                         res_sender.send(res).unwrap();
                         return;
@@ -481,4 +546,13 @@ async fn transfer(
         )
         .unwrap();
     return Ok(());
+}
+
+fn get_n_receivers_result(
+    query_params: &HashMap<String, String>,
+) -> Result<u32, std::num::ParseIntError> {
+    return query_params
+        .get("n")
+        .map(|s| s.parse())
+        .unwrap_or_else(|| Ok(1));
 }

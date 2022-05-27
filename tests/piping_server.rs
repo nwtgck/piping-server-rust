@@ -544,6 +544,106 @@ async fn f() -> Result<(), BoxError> {
 
 // TODO: add tests when sender or receiver receive 400
 
+#[it("should reject invalid n")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    {
+        let send_body_str = "this is a content";
+        let send_req = hyper::Request::builder()
+            .method(hyper::Method::POST)
+            .header("Content-Type", "text/plain")
+            .uri(format!("http://{}/mypath?n=abc", serve.addr))
+            .body(hyper::Body::from(send_body_str))?;
+
+        let client = Client::new();
+        let send_res = client.request(send_req).await?;
+        let (send_res_parts, _send_res_body) = send_res.into_parts();
+        assert_eq!(send_res_parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&send_res_parts.headers, "content-type"),
+            Some("text/plain")
+        );
+        assert_eq!(
+            get_header_value(&send_res_parts.headers, "access-control-allow-origin"),
+            Some("*")
+        );
+    }
+
+    {
+        let get_req = hyper::Request::builder()
+            .method(hyper::Method::GET)
+            .uri(format!("http://{}/mypath?n=abc", serve.addr))
+            .body(hyper::Body::empty())?;
+
+        let client = Client::new();
+        let get_res = client.request(get_req).await?;
+        let (get_res_parts, _get_res_body) = get_res.into_parts();
+        assert_eq!(get_res_parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&get_res_parts.headers, "content-type"),
+            Some("text/plain")
+        );
+        assert_eq!(
+            get_header_value(&get_res_parts.headers, "access-control-allow-origin"),
+            Some("*")
+        );
+    }
+
+    serve.shutdown_tx.send(()).expect("shutdown failed");
+    Ok(())
+}
+
+#[it("should reject n > 1 because not supported yet")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    {
+        let send_body_str = "this is a content";
+        let send_req = hyper::Request::builder()
+            .method(hyper::Method::POST)
+            .header("Content-Type", "text/plain")
+            .uri(format!("http://{}/mypath?n=2", serve.addr))
+            .body(hyper::Body::from(send_body_str))?;
+
+        let client = Client::new();
+        let send_res = client.request(send_req).await?;
+        let (send_res_parts, _send_res_body) = send_res.into_parts();
+        assert_eq!(send_res_parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&send_res_parts.headers, "content-type"),
+            Some("text/plain")
+        );
+        assert_eq!(
+            get_header_value(&send_res_parts.headers, "access-control-allow-origin"),
+            Some("*")
+        );
+    }
+
+    {
+        let get_req = hyper::Request::builder()
+            .method(hyper::Method::GET)
+            .uri(format!("http://{}/mypath?n=2", serve.addr))
+            .body(hyper::Body::empty())?;
+
+        let client = Client::new();
+        let get_res = client.request(get_req).await?;
+        let (get_res_parts, _get_res_body) = get_res.into_parts();
+        assert_eq!(get_res_parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&get_res_parts.headers, "content-type"),
+            Some("text/plain")
+        );
+        assert_eq!(
+            get_header_value(&get_res_parts.headers, "access-control-allow-origin"),
+            Some("*")
+        );
+    }
+
+    serve.shutdown_tx.send(()).expect("shutdown failed");
+    Ok(())
+}
+
 #[it("should pass X-Piping and attach Access-Control-Expose-Headers: X-Piping when sending with X-Piping")]
 async fn f() -> Result<(), BoxError> {
     let serve: Serve = serve().await;
