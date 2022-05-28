@@ -277,6 +277,11 @@ async fn f() -> Result<(), BoxError> {
 async fn f() -> Result<(), BoxError> {
     let serve: Serve = serve().await;
 
+    fn normalize_headers(headers: &mut http::header::HeaderMap<http::header::HeaderValue>) {
+        headers.remove("date");
+        headers.remove("content-security-policy");
+    }
+
     let client = Client::new();
     for reserved_path in piping_server::piping_server::reserved_paths::VALUES {
         let uri = format!("http://{}{}", serve.addr, reserved_path).parse::<http::Uri>()?;
@@ -287,8 +292,7 @@ async fn f() -> Result<(), BoxError> {
             .body(hyper::Body::empty())?;
         let get_res = client.request(get_req).await?;
         let (mut get_parts, _) = get_res.into_parts();
-        get_parts.headers.remove("date");
-        get_parts.headers.remove("content-security-policy");
+        normalize_headers(&mut get_parts.headers);
 
         let head_req = hyper::Request::builder()
             .method(hyper::Method::HEAD)
@@ -296,8 +300,7 @@ async fn f() -> Result<(), BoxError> {
             .body(hyper::Body::empty())?;
         let head_res = client.request(head_req).await?;
         let (mut head_parts, _) = head_res.into_parts();
-        head_parts.headers.remove("date");
-        head_parts.headers.remove("content-security-policy");
+        normalize_headers(&mut head_parts.headers);
 
         assert_eq!(head_parts.status, get_parts.status);
         assert_eq!(head_parts.headers, get_parts.headers);
