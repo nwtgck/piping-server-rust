@@ -159,7 +159,12 @@ impl PipingServer {
                         return;
                     }
                     reserved_paths::ROBOTS_TXT => {
-                        let res = Response::builder().status(404).body(Body::empty()).unwrap();
+                        let res = Response::builder()
+                            .status(404)
+                            // explicit `content-length: 0`: https://github.com/hyperium/hyper/pull/2836
+                            .header("Content-Length", 0)
+                            .body(Body::empty())
+                            .unwrap();
                         res_sender.send(res).unwrap();
                         return;
                     }
