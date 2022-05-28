@@ -91,11 +91,23 @@ impl PipingServer {
                     }
                     reserved_paths::NO_SCRIPT => {
                         let query_params = query_param_to_hash_map(req.uri().query());
-                        let html = dynamic_resources::no_script_html(&query_params);
+                        let style_nonce: String = {
+                            let mut nonce_bytes = [0u8; 16];
+                            getrandom::getrandom(&mut nonce_bytes).unwrap();
+                            base64::encode(nonce_bytes)
+                        };
+                        let html = dynamic_resources::no_script_html(&query_params, &style_nonce);
                         let res = Response::builder()
                             .status(200)
                             .header("Content-Type", "text/html")
                             .header("Access-Control-Allow-Origin", "*")
+                            .header(
+                                "Content-Security-Policy",
+                                format!(
+                                    "default-src 'none'; style-src 'nonce-{style_nonce}'",
+                                    style_nonce = style_nonce,
+                                ),
+                            )
                             .body(Body::from(html))
                             .unwrap();
                         res_sender.send(res).unwrap();

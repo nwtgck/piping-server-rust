@@ -2,6 +2,7 @@ use futures::channel::oneshot;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::Client;
 use hyper::Server;
+use regex::Regex;
 use specit::tokio_it as it;
 use std::convert::Infallible;
 
@@ -150,6 +151,11 @@ async fn f() -> Result<(), BoxError> {
         Some("text/html")
     );
 
+    // Should disable JavaScript and allow CSS with nonce
+    assert!(Regex::new(r"^default-src 'none'; style-src 'nonce-.+'$")
+        .unwrap()
+        .is_match(&get_header_value(&parts.headers, "content-security-policy").unwrap()));
+
     serve.shutdown().await?;
     Ok(())
 }
@@ -282,6 +288,7 @@ async fn f() -> Result<(), BoxError> {
         let get_res = client.request(get_req).await?;
         let (mut get_parts, _) = get_res.into_parts();
         get_parts.headers.remove("date");
+        get_parts.headers.remove("content-security-policy");
         // https://github.com/hyperium/hyper/pull/2836
         if reserved_path == piping_server::piping_server::reserved_paths::ROBOTS_TXT {
             get_parts.headers.remove("content-length");
@@ -294,6 +301,7 @@ async fn f() -> Result<(), BoxError> {
         let head_res = client.request(head_req).await?;
         let (mut head_parts, _) = head_res.into_parts();
         head_parts.headers.remove("date");
+        head_parts.headers.remove("content-security-policy");
 
         assert_eq!(head_parts.status, get_parts.status);
         assert_eq!(head_parts.headers, get_parts.headers);
