@@ -282,6 +282,10 @@ async fn f() -> Result<(), BoxError> {
         let get_res = client.request(get_req).await?;
         let (mut get_parts, _) = get_res.into_parts();
         get_parts.headers.remove("date");
+        // https://github.com/hyperium/hyper/pull/2836
+        if reserved_path == piping_server::piping_server::reserved_paths::ROBOTS_TXT {
+            get_parts.headers.remove("content-length");
+        }
 
         let head_req = hyper::Request::builder()
             .method(hyper::Method::HEAD)
