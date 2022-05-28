@@ -473,8 +473,7 @@ async fn f() -> Result<(), BoxError> {
 
     let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
 
-    let (get_res_tx, get_res_rx) = oneshot::channel();
-    tokio::spawn({
+    let get_res_join_handle = tokio::spawn({
         let uri = uri.clone();
         async {
             let get_req = hyper::Request::builder()
@@ -483,8 +482,7 @@ async fn f() -> Result<(), BoxError> {
                 .body(hyper::Body::empty())?;
             let client = Client::new();
             let get_res = client.request(get_req).await?;
-            get_res_tx.send(get_res).unwrap();
-            Ok::<_, BoxError>(())
+            Ok::<_, BoxError>(get_res)
         }
     });
 
@@ -508,7 +506,7 @@ async fn f() -> Result<(), BoxError> {
         Some("*")
     );
 
-    let (parts, body) = get_res_rx.await?.into_parts();
+    let (parts, body) = get_res_join_handle.await??.into_parts();
     let all_bytes: Vec<u8> = read_all_body(body).await;
     let expect = send_body_str.to_owned().into_bytes();
     assert_eq!(all_bytes, expect);
