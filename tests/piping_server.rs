@@ -274,6 +274,32 @@ async fn f() -> Result<(), BoxError> {
     Ok(())
 }
 
+#[it("should not allow user to send the reserved paths")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let client = Client::new();
+    for reserved_path in piping_server::piping_server::reserved_paths::VALUES {
+        let uri = format!("http://{}{}", serve.addr, reserved_path).parse::<http::Uri>()?;
+
+        let get_req = hyper::Request::builder()
+            .method(hyper::Method::POST)
+            .uri(uri.clone())
+            .body(hyper::Body::from("this is a content"))?;
+        let get_res = client.request(get_req).await?;
+        let (get_parts, _) = get_res.into_parts();
+
+        assert_eq!(get_parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&get_parts.headers, "access-control-allow-origin"),
+            Some("*")
+        );
+    }
+
+    serve.shutdown().await?;
+    Ok(())
+}
+
 #[it("should return a HEAD response with the same headers as GET response in the reserved paths")]
 async fn f() -> Result<(), BoxError> {
     let serve: Serve = serve().await;
