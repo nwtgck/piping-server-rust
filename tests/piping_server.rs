@@ -633,7 +633,71 @@ async fn f() -> Result<(), BoxError> {
     Ok(())
 }
 
-// TODO: add tests when sender or receiver receive 400
+#[it("should reject a receiver connecting a path another receiver connected already")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
+
+    let get_req = hyper::Request::builder()
+        .method(hyper::Method::GET)
+        .uri(uri.clone())
+        .body(hyper::Body::empty())?;
+
+    let first_get_res_parts_join_handle = tokio::spawn(async {
+        let client = Client::new();
+        let get_res = client.request(get_req).await?;
+        let (get_res_parts, _get_res_body) = get_res.into_parts();
+        Ok::<_, BoxError>(get_res_parts)
+    });
+    tokio::time::sleep(time::Duration::from_millis(500)).await;
+
+    {
+        let get_req = hyper::Request::builder()
+            .method(hyper::Method::GET)
+            .uri(uri.clone())
+            .body(hyper::Body::empty())?;
+
+        let client = Client::new();
+        let get_res = client.request(get_req).await?;
+        let (get_res_parts, _get_res_body) = get_res.into_parts();
+        assert_eq!(get_res_parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&get_res_parts.headers, "content-type"),
+            Some("text/plain")
+        );
+        assert_eq!(
+            get_header_value(&get_res_parts.headers, "access-control-allow-origin"),
+            Some("*")
+        );
+    }
+
+    {
+        let send_body_str = "this is a content";
+        let send_req = hyper::Request::builder()
+            .method(hyper::Method::POST)
+            .header("Content-Type", "text/plain")
+            .uri(uri.clone())
+            .body(hyper::Body::from(send_body_str))?;
+
+        let client = Client::new();
+        client.request(send_req).await?;
+    }
+
+    let first_get_res_parts = first_get_res_parts_join_handle.await??;
+    assert_eq!(first_get_res_parts.status, http::StatusCode::OK);
+    assert_eq!(
+        get_header_value(&first_get_res_parts.headers, "content-type"),
+        Some("text/plain")
+    );
+    assert_eq!(
+        get_header_value(&first_get_res_parts.headers, "access-control-allow-origin"),
+        Some("*")
+    );
+
+    serve.shutdown_tx.send(()).expect("shutdown failed");
+    Ok(())
+}
 
 #[it("should reject invalid n")]
 async fn f() -> Result<(), BoxError> {
