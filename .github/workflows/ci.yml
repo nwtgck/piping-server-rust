@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   cargo_fmt:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
     - run: cargo fmt --all -- --check
@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         runs-on:
-          - ubuntu-18.04
+          - ubuntu-20.04
           - macOS-10.15
     runs-on: ${{ matrix.runs-on }}
     steps:
@@ -22,7 +22,7 @@ jobs:
 
   # MSRV (minimum supported Rust version)
   cargo_test_msrv:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
     - uses: actions-rs/toolchain@v1
@@ -48,7 +48,7 @@ jobs:
           - x86_64-linux-android
           - x86_64-pc-windows-gnu
           - x86_64-unknown-linux-musl
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Install cross
@@ -75,7 +75,7 @@ jobs:
   linux_operational_test:
     needs:
       - cross_build
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - name: Download the artifact (cross build)
       uses: actions/download-artifact@v2
@@ -149,7 +149,7 @@ jobs:
           piping-server-*.tar.gz
 
   docker:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
     - run: docker build -t piping-server-rust .
@@ -207,7 +207,7 @@ jobs:
       - cargo_test
       - linux_operational_test
       - build_for_mac
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - name: Download the artifact (cross build)
       uses: actions/download-artifact@v2
@@ -233,7 +233,7 @@ jobs:
         ./ghr_v0.14.0_linux_amd64/ghr -t ${{ secrets.GITHUB_TOKEN }} -u ${GITHUB_ACTOR} -r ${REPO} -c ${GITHUB_SHA} -delete ${VERSION} ./publish_dir
 
   heroku_docker_build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - run: docker build -t piping-server-rust -f ./heroku.dockerfile .
