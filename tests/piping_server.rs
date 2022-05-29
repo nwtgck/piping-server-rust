@@ -9,6 +9,7 @@ use std::convert::Infallible;
 use piping_server::piping_server::PipingServer;
 use piping_server::req_res_handler::req_res_handler;
 use std::net::SocketAddr;
+use std::time;
 
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -496,6 +497,7 @@ async fn f() -> Result<(), BoxError> {
             Ok::<_, BoxError>(get_res)
         }
     });
+    tokio::time::sleep(time::Duration::from_millis(100)).await;
 
     let send_body_str = "this is a content";
     let send_req = hyper::Request::builder()
