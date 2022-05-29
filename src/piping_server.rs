@@ -177,68 +177,52 @@ impl PipingServer {
                     if let Some(value) = req.headers().get("service-worker") {
                         if value == http::HeaderValue::from_static("script") {
                             // Reject Service Worker registration
-                            let res = Response::builder()
-                                .status(400)
-                                .header("Content-Type", "text/plain")
-                                .header("Access-Control-Allow-Origin", "*")
-                                .body(Body::from(
+                            res_sender
+                                .send(rejection_response(Body::from(
                                     "[ERROR] Service Worker registration is rejected.\n",
-                                ))
+                                )))
                                 .unwrap();
-                            res_sender.send(res).unwrap();
                             return;
                         }
                     }
                     let query_params = query_param_to_hash_map(req.uri().query());
                     let n_receivers_result: Result<u32, _> = get_n_receivers_result(&query_params);
                     if let Err(_) = n_receivers_result {
-                        let res = Response::builder()
-                            .status(400)
-                            .header("Content-Type", "text/plain")
-                            .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from("[ERROR] Invalid \"n\" query parameter\n"))
+                        res_sender
+                            .send(rejection_response(Body::from(
+                                "[ERROR] Invalid \"n\" query parameter\n",
+                            )))
                             .unwrap();
-                        res_sender.send(res).unwrap();
                         return;
                     }
                     let n_receivers = n_receivers_result.unwrap();
                     if n_receivers <= 0 {
-                        let res = Response::builder()
-                            .status(400)
-                            .header("Content-Type", "text/plain")
-                            .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from(format!(
+                        res_sender
+                            .send(rejection_response(Body::from(format!(
                                 "[ERROR] n should > 0, but n = {n_receivers}.\n",
                                 n_receivers = n_receivers
-                            )))
+                            ))))
                             .unwrap();
-                        res_sender.send(res).unwrap();
                         return;
                     }
                     if n_receivers > 1 {
-                        let res = Response::builder()
-                            .status(400)
-                            .header("Content-Type", "text/plain")
-                            .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from("[ERROR] n > 1 not supported yet.\n"))
+                        res_sender
+                            .send(rejection_response(Body::from(
+                                "[ERROR] n > 1 not supported yet.\n",
+                            )))
                             .unwrap();
-                        res_sender.send(res).unwrap();
                         return;
                     }
                     let receiver_connected: bool =
                         path_to_receiver.read().unwrap().contains_key(path);
                     // If a receiver has been connected already
                     if receiver_connected {
-                        let res = Response::builder()
-                            .status(400)
-                            .header("Content-Type", "text/plain")
-                            .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from(format!(
+                        res_sender
+                            .send(rejection_response(Body::from(format!(
                                 "[ERROR] Another receiver has been connected on '{}'.\n",
                                 path
-                            )))
+                            ))))
                             .unwrap();
-                        res_sender.send(res).unwrap();
                         return;
                     }
                     let sender = path_to_sender.write().unwrap().remove(path);
@@ -272,16 +256,7 @@ impl PipingServer {
                 &Method::POST | &Method::PUT => {
                     if reserved_paths::VALUES.contains(&path) {
                         // Reject reserved path sending
-                        let res = Response::builder()
-                            .status(400)
-                            .header("Content-Type", "text/plain")
-                            .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from(format!(
-                                "[ERROR] Cannot send to the reserved path '{}'. (e.g. '/mypath123')\n",
-                                path
-                            )))
-                            .unwrap();
-                        res_sender.send(res).unwrap();
+                        res_sender.send(rejection_response(Body::from(format!("[ERROR] Cannot send to the reserved path '{}'. (e.g. '/mypath123')\n", path)))).unwrap();
                         return;
                     }
                     // Notify that Content-Range is not supported
@@ -289,67 +264,51 @@ impl PipingServer {
                     // ref: https://github.com/httpwg/http-core/pull/653
                     if req.headers().contains_key("content-range") {
                         // Reject reserved path sending
-                        let res = Response::builder()
-                            .status(400)
-                            .header("Content-Type", "text/plain")
-                            .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from(format!(
+                        res_sender
+                            .send(rejection_response(Body::from(format!(
                                 "[ERROR] Content-Range is not supported for now in {}\n",
                                 req.method()
-                            )))
+                            ))))
                             .unwrap();
-                        res_sender.send(res).unwrap();
                         return;
                     }
                     let query_params = query_param_to_hash_map(req.uri().query());
                     let n_receivers_result: Result<u32, _> = get_n_receivers_result(&query_params);
                     if let Err(_) = n_receivers_result {
-                        let res = Response::builder()
-                            .status(400)
-                            .header("Content-Type", "text/plain")
-                            .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from("[ERROR] Invalid \"n\" query parameter\n"))
+                        res_sender
+                            .send(rejection_response(Body::from(
+                                "[ERROR] Invalid \"n\" query parameter\n",
+                            )))
                             .unwrap();
-                        res_sender.send(res).unwrap();
                         return;
                     }
                     let n_receivers = n_receivers_result.unwrap();
                     if n_receivers <= 0 {
-                        let res = Response::builder()
-                            .status(400)
-                            .header("Content-Type", "text/plain")
-                            .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from(format!(
+                        res_sender
+                            .send(rejection_response(Body::from(format!(
                                 "[ERROR] n should > 0, but n = {n_receivers}.\n",
                                 n_receivers = n_receivers
-                            )))
+                            ))))
                             .unwrap();
-                        res_sender.send(res).unwrap();
                         return;
                     }
                     if n_receivers > 1 {
-                        let res = Response::builder()
-                            .status(400)
-                            .header("Content-Type", "text/plain")
-                            .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from("[ERROR] n > 1 not supported yet.\n"))
+                        res_sender
+                            .send(rejection_response(Body::from(
+                                "[ERROR] n > 1 not supported yet.\n",
+                            )))
                             .unwrap();
-                        res_sender.send(res).unwrap();
                         return;
                     }
                     let sender_connected: bool = path_to_sender.read().unwrap().contains_key(path);
                     // If a sender has been connected already
                     if sender_connected {
-                        let res = Response::builder()
-                            .status(400)
-                            .header("Content-Type", "text/plain")
-                            .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from(format!(
+                        res_sender
+                            .send(rejection_response(Body::from(format!(
                                 "[ERROR] Another sender has been connected on '{}'.\n",
                                 path
-                            )))
+                            ))))
                             .unwrap();
-                        res_sender.send(res).unwrap();
                         return;
                     }
 
@@ -572,4 +531,13 @@ fn get_n_receivers_result(
         .get("n")
         .map(|s| s.parse())
         .unwrap_or_else(|| Ok(1));
+}
+
+fn rejection_response(body: Body) -> Response<Body> {
+    Response::builder()
+        .status(400)
+        .header("Content-Type", "text/plain")
+        .header("Access-Control-Allow-Origin", "*")
+        .body(body)
+        .unwrap()
 }
