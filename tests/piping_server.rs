@@ -2,12 +2,14 @@ use futures::channel::oneshot;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::Client;
 use hyper::Server;
+use regex::Regex;
 use specit::tokio_it as it;
 use std::convert::Infallible;
 
 use piping_server::piping_server::PipingServer;
 use piping_server::req_res_handler::req_res_handler;
 use std::net::SocketAddr;
+use std::time;
 
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -150,6 +152,11 @@ async fn f() -> Result<(), BoxError> {
         Some("text/html")
     );
 
+    // Should disable JavaScript and allow CSS with nonce
+    assert!(Regex::new(r"^default-src 'none'; style-src 'nonce-.+'$")
+        .unwrap()
+        .is_match(&get_header_value(&parts.headers, "content-security-policy").unwrap()));
+
     serve.shutdown().await?;
     Ok(())
 }
@@ -267,9 +274,40 @@ async fn f() -> Result<(), BoxError> {
     Ok(())
 }
 
+#[it("should not allow user to send the reserved paths")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let client = Client::new();
+    for reserved_path in piping_server::piping_server::reserved_paths::VALUES {
+        let uri = format!("http://{}{}", serve.addr, reserved_path).parse::<http::Uri>()?;
+
+        let get_req = hyper::Request::builder()
+            .method(hyper::Method::POST)
+            .uri(uri.clone())
+            .body(hyper::Body::from("this is a content"))?;
+        let get_res = client.request(get_req).await?;
+        let (get_parts, _) = get_res.into_parts();
+
+        assert_eq!(get_parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&get_parts.headers, "access-control-allow-origin"),
+            Some("*")
+        );
+    }
+
+    serve.shutdown().await?;
+    Ok(())
+}
+
 #[it("should return a HEAD response with the same headers as GET response in the reserved paths")]
 async fn f() -> Result<(), BoxError> {
     let serve: Serve = serve().await;
+
+    fn normalize_headers(headers: &mut http::header::HeaderMap<http::header::HeaderValue>) {
+        headers.remove("date");
+        headers.remove("content-security-policy");
+    }
 
     let client = Client::new();
     for reserved_path in piping_server::piping_server::reserved_paths::VALUES {
@@ -281,7 +319,7 @@ async fn f() -> Result<(), BoxError> {
             .body(hyper::Body::empty())?;
         let get_res = client.request(get_req).await?;
         let (mut get_parts, _) = get_res.into_parts();
-        get_parts.headers.remove("date");
+        normalize_headers(&mut get_parts.headers);
 
         let head_req = hyper::Request::builder()
             .method(hyper::Method::HEAD)
@@ -289,7 +327,7 @@ async fn f() -> Result<(), BoxError> {
             .body(hyper::Body::empty())?;
         let head_res = client.request(head_req).await?;
         let (mut head_parts, _) = head_res.into_parts();
-        head_parts.headers.remove("date");
+        normalize_headers(&mut head_parts.headers);
 
         assert_eq!(head_parts.status, get_parts.status);
         assert_eq!(head_parts.headers, get_parts.headers);
@@ -323,6 +361,51 @@ async fn f() -> Result<(), BoxError> {
     assert_eq!(
         get_header_value(&parts.headers, "access-control-allow-methods"),
         Some("GET, HEAD, POST, PUT, OPTIONS")
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-allow-headers")
+            .unwrap()
+            .to_lowercase(),
+        "content-type, content-disposition, x-piping".to_owned()
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-max-age"),
+        Some("86400")
+    );
+
+    serve.shutdown().await?;
+    Ok(())
+}
+
+#[it("should support Private Network Access preflight request")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
+
+    let get_req = hyper::Request::builder()
+        .method(hyper::Method::OPTIONS)
+        .uri(uri.clone())
+        .header("Access-Control-Request-Private-Network", "true")
+        .body(hyper::Body::empty())?;
+    let client = Client::new();
+    let res = client.request(get_req).await?;
+
+    let (parts, _body) = res.into_parts();
+
+    assert_eq!(parts.status, http::StatusCode::OK);
+
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-allow-origin"),
+        Some("*")
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-allow-methods"),
+        Some("GET, HEAD, POST, PUT, OPTIONS")
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-allow-private-network"),
+        Some("true")
     );
     assert_eq!(
         get_header_value(&parts.headers, "access-control-allow-headers")
@@ -473,8 +556,7 @@ async fn f() -> Result<(), BoxError> {
 
     let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
 
-    let (get_res_tx, get_res_rx) = oneshot::channel();
-    tokio::spawn({
+    let get_res_join_handle = tokio::spawn({
         let uri = uri.clone();
         async {
             let get_req = hyper::Request::builder()
@@ -483,10 +565,10 @@ async fn f() -> Result<(), BoxError> {
                 .body(hyper::Body::empty())?;
             let client = Client::new();
             let get_res = client.request(get_req).await?;
-            get_res_tx.send(get_res).unwrap();
-            Ok::<_, BoxError>(())
+            Ok::<_, BoxError>(get_res)
         }
     });
+    tokio::time::sleep(time::Duration::from_millis(100)).await;
 
     let send_body_str = "this is a content";
     let send_req = hyper::Request::builder()
@@ -508,7 +590,7 @@ async fn f() -> Result<(), BoxError> {
         Some("*")
     );
 
-    let (parts, body) = get_res_rx.await?.into_parts();
+    let (parts, body) = get_res_join_handle.await??.into_parts();
     let all_bytes: Vec<u8> = read_all_body(body).await;
     let expect = send_body_str.to_owned().into_bytes();
     assert_eq!(all_bytes, expect);
@@ -542,7 +624,275 @@ async fn f() -> Result<(), BoxError> {
     Ok(())
 }
 
-// TODO: add tests when sender or receiver receive 400
+#[it("should reject a sender connecting a path another sender connected already")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
+
+    {
+        let send_body_str = "this is a content";
+        let send_req = hyper::Request::builder()
+            .method(hyper::Method::POST)
+            .header("Content-Type", "text/plain")
+            .uri(uri.clone())
+            .body(hyper::Body::from(send_body_str))?;
+
+        let client = Client::new();
+        let send_res = client.request(send_req).await?;
+        let (send_res_parts, _send_res_body) = send_res.into_parts();
+        assert_eq!(send_res_parts.status, http::StatusCode::OK);
+        assert_eq!(
+            get_header_value(&send_res_parts.headers, "content-type"),
+            Some("text/plain")
+        );
+        assert_eq!(
+            get_header_value(&send_res_parts.headers, "access-control-allow-origin"),
+            Some("*")
+        );
+    }
+
+    {
+        let send_body_str = "this is a content";
+        let send_req = hyper::Request::builder()
+            .method(hyper::Method::POST)
+            .header("Content-Type", "text/plain")
+            .uri(uri.clone())
+            .body(hyper::Body::from(send_body_str))?;
+
+        let client = Client::new();
+        let send_res = client.request(send_req).await?;
+        let (send_res_parts, _send_res_body) = send_res.into_parts();
+        assert_eq!(send_res_parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&send_res_parts.headers, "content-type"),
+            Some("text/plain")
+        );
+        assert_eq!(
+            get_header_value(&send_res_parts.headers, "access-control-allow-origin"),
+            Some("*")
+        );
+    }
+
+    serve.shutdown_tx.send(()).expect("shutdown failed");
+    Ok(())
+}
+
+#[it("should reject a receiver connecting a path another receiver connected already")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
+
+    let get_req = hyper::Request::builder()
+        .method(hyper::Method::GET)
+        .uri(uri.clone())
+        .body(hyper::Body::empty())?;
+
+    let first_get_res_parts_join_handle = tokio::spawn(async {
+        let client = Client::new();
+        let get_res = client.request(get_req).await?;
+        let (get_res_parts, _get_res_body) = get_res.into_parts();
+        Ok::<_, BoxError>(get_res_parts)
+    });
+    tokio::time::sleep(time::Duration::from_millis(500)).await;
+
+    {
+        let get_req = hyper::Request::builder()
+            .method(hyper::Method::GET)
+            .uri(uri.clone())
+            .body(hyper::Body::empty())?;
+
+        let client = Client::new();
+        let get_res = client.request(get_req).await?;
+        let (get_res_parts, _get_res_body) = get_res.into_parts();
+        assert_eq!(get_res_parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&get_res_parts.headers, "content-type"),
+            Some("text/plain")
+        );
+        assert_eq!(
+            get_header_value(&get_res_parts.headers, "access-control-allow-origin"),
+            Some("*")
+        );
+    }
+
+    {
+        let send_body_str = "this is a content";
+        let send_req = hyper::Request::builder()
+            .method(hyper::Method::POST)
+            .header("Content-Type", "text/plain")
+            .uri(uri.clone())
+            .body(hyper::Body::from(send_body_str))?;
+
+        let client = Client::new();
+        client.request(send_req).await?;
+    }
+
+    let first_get_res_parts = first_get_res_parts_join_handle.await??;
+    assert_eq!(first_get_res_parts.status, http::StatusCode::OK);
+    assert_eq!(
+        get_header_value(&first_get_res_parts.headers, "content-type"),
+        Some("text/plain")
+    );
+    assert_eq!(
+        get_header_value(&first_get_res_parts.headers, "access-control-allow-origin"),
+        Some("*")
+    );
+
+    serve.shutdown_tx.send(()).expect("shutdown failed");
+    Ok(())
+}
+
+#[it("should reject invalid n")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    {
+        let send_body_str = "this is a content";
+        let send_req = hyper::Request::builder()
+            .method(hyper::Method::POST)
+            .header("Content-Type", "text/plain")
+            .uri(format!("http://{}/mypath?n=abc", serve.addr))
+            .body(hyper::Body::from(send_body_str))?;
+
+        let client = Client::new();
+        let send_res = client.request(send_req).await?;
+        let (send_res_parts, _send_res_body) = send_res.into_parts();
+        assert_eq!(send_res_parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&send_res_parts.headers, "content-type"),
+            Some("text/plain")
+        );
+        assert_eq!(
+            get_header_value(&send_res_parts.headers, "access-control-allow-origin"),
+            Some("*")
+        );
+    }
+
+    {
+        let get_req = hyper::Request::builder()
+            .method(hyper::Method::GET)
+            .uri(format!("http://{}/mypath?n=abc", serve.addr))
+            .body(hyper::Body::empty())?;
+
+        let client = Client::new();
+        let get_res = client.request(get_req).await?;
+        let (get_res_parts, _get_res_body) = get_res.into_parts();
+        assert_eq!(get_res_parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&get_res_parts.headers, "content-type"),
+            Some("text/plain")
+        );
+        assert_eq!(
+            get_header_value(&get_res_parts.headers, "access-control-allow-origin"),
+            Some("*")
+        );
+    }
+
+    serve.shutdown_tx.send(()).expect("shutdown failed");
+    Ok(())
+}
+
+#[it("should reject n = 0")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    {
+        let send_body_str = "this is a content";
+        let send_req = hyper::Request::builder()
+            .method(hyper::Method::POST)
+            .header("Content-Type", "text/plain")
+            .uri(format!("http://{}/mypath?n=0", serve.addr))
+            .body(hyper::Body::from(send_body_str))?;
+
+        let client = Client::new();
+        let send_res = client.request(send_req).await?;
+        let (send_res_parts, _send_res_body) = send_res.into_parts();
+        assert_eq!(send_res_parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&send_res_parts.headers, "content-type"),
+            Some("text/plain")
+        );
+        assert_eq!(
+            get_header_value(&send_res_parts.headers, "access-control-allow-origin"),
+            Some("*")
+        );
+    }
+
+    {
+        let get_req = hyper::Request::builder()
+            .method(hyper::Method::GET)
+            .uri(format!("http://{}/mypath?n=0", serve.addr))
+            .body(hyper::Body::empty())?;
+
+        let client = Client::new();
+        let get_res = client.request(get_req).await?;
+        let (get_res_parts, _get_res_body) = get_res.into_parts();
+        assert_eq!(get_res_parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&get_res_parts.headers, "content-type"),
+            Some("text/plain")
+        );
+        assert_eq!(
+            get_header_value(&get_res_parts.headers, "access-control-allow-origin"),
+            Some("*")
+        );
+    }
+
+    serve.shutdown_tx.send(()).expect("shutdown failed");
+    Ok(())
+}
+
+#[it("should reject n > 1 because not supported yet")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    {
+        let send_body_str = "this is a content";
+        let send_req = hyper::Request::builder()
+            .method(hyper::Method::POST)
+            .header("Content-Type", "text/plain")
+            .uri(format!("http://{}/mypath?n=2", serve.addr))
+            .body(hyper::Body::from(send_body_str))?;
+
+        let client = Client::new();
+        let send_res = client.request(send_req).await?;
+        let (send_res_parts, _send_res_body) = send_res.into_parts();
+        assert_eq!(send_res_parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&send_res_parts.headers, "content-type"),
+            Some("text/plain")
+        );
+        assert_eq!(
+            get_header_value(&send_res_parts.headers, "access-control-allow-origin"),
+            Some("*")
+        );
+    }
+
+    {
+        let get_req = hyper::Request::builder()
+            .method(hyper::Method::GET)
+            .uri(format!("http://{}/mypath?n=2", serve.addr))
+            .body(hyper::Body::empty())?;
+
+        let client = Client::new();
+        let get_res = client.request(get_req).await?;
+        let (get_res_parts, _get_res_body) = get_res.into_parts();
+        assert_eq!(get_res_parts.status, http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            get_header_value(&get_res_parts.headers, "content-type"),
+            Some("text/plain")
+        );
+        assert_eq!(
+            get_header_value(&get_res_parts.headers, "access-control-allow-origin"),
+            Some("*")
+        );
+    }
+
+    serve.shutdown_tx.send(()).expect("shutdown failed");
+    Ok(())
+}
 
 #[it("should pass X-Piping and attach Access-Control-Expose-Headers: X-Piping when sending with X-Piping")]
 async fn f() -> Result<(), BoxError> {

@@ -4,6 +4,7 @@ use core::task::{Context, Poll};
 use futures::channel::oneshot;
 use futures::ready;
 use pin_project_lite::pin_project;
+use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::{Arc, RwLock};
 use tokio::net::TcpStream;
@@ -261,4 +262,12 @@ impl<T> futures::stream::Stream for One<T> {
 #[inline]
 pub fn one_stream<T>(x: T) -> One<T> {
     One::new(x)
+}
+
+pub fn query_param_to_hash_map(query: Option<&str>) -> HashMap<String, String> {
+    return match query {
+        Some(query) => serde_urlencoded::from_str::<HashMap<String, String>>(query)
+            .unwrap_or_else(|_| HashMap::new()),
+        None => HashMap::new(),
+    };
 }

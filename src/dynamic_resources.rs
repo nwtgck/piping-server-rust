@@ -164,7 +164,7 @@ curl {url} | openssl aes-256-cbc -d
     );
 }
 
-pub fn no_script_html(query_params: &HashMap<String, String>) -> String {
+pub fn no_script_html(query_params: &HashMap<String, String>, style_nonce: &str) -> String {
     let path_query_param_name = "path";
     let mode_query_param_name = "mode";
     let file_mode = "file";
@@ -215,7 +215,7 @@ pub fn no_script_html(query_params: &HashMap<String, String>) -> String {
   <title>File transfer without JavaScript</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta charset="UTF-8">
-  <style>
+  <style nonce="{style_nonce}">
     body {{
       font-family: sans-serif;
       font-size: 110%;
@@ -250,6 +250,7 @@ pub fn no_script_html(query_params: &HashMap<String, String>) -> String {
 </body>
 </html>
 "#,
+        style_nonce = style_nonce,
         path_query_param_name = path_query_param_name,
         mode_query_param_name = mode_query_param_name,
         file_mode = file_mode,
