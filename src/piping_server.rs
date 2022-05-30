@@ -377,6 +377,17 @@ impl PipingServer {
                             "Access-Control-Allow-Headers",
                             "Content-Type, Content-Disposition, X-Piping",
                         )
+                        // Private Network Access preflights: https://developer.chrome.com/blog/private-network-access-preflight/
+                        .option_header(
+                            "Access-Control-Allow-Private-Network",
+                            if req.headers().get("Access-Control-Request-Private-Network")
+                                == Some(&http::header::HeaderValue::from_static("true"))
+                            {
+                                Some("true")
+                            } else {
+                                None
+                            },
+                        )
                         .header("Access-Control-Max-Age", 86400)
                         .header("Content-Length", 0)
                         .body(Body::empty())

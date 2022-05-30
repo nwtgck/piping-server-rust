@@ -377,6 +377,51 @@ async fn f() -> Result<(), BoxError> {
     Ok(())
 }
 
+#[it("should support Private Network Access preflight request")]
+async fn f() -> Result<(), BoxError> {
+    let serve: Serve = serve().await;
+
+    let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
+
+    let get_req = hyper::Request::builder()
+        .method(hyper::Method::OPTIONS)
+        .uri(uri.clone())
+        .header("Access-Control-Request-Private-Network", "true")
+        .body(hyper::Body::empty())?;
+    let client = Client::new();
+    let res = client.request(get_req).await?;
+
+    let (parts, _body) = res.into_parts();
+
+    assert_eq!(parts.status, http::StatusCode::OK);
+
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-allow-origin"),
+        Some("*")
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-allow-methods"),
+        Some("GET, HEAD, POST, PUT, OPTIONS")
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-allow-private-network"),
+        Some("true")
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-allow-headers")
+            .unwrap()
+            .to_lowercase(),
+        "content-type, content-disposition, x-piping".to_owned()
+    );
+    assert_eq!(
+        get_header_value(&parts.headers, "access-control-max-age"),
+        Some("86400")
+    );
+
+    serve.shutdown().await?;
+    Ok(())
+}
+
 #[it("should reject Service Worker registration request")]
 async fn f() -> Result<(), BoxError> {
     let serve: Serve = serve().await;
