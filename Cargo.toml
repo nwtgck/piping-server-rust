@@ -24,6 +24,7 @@ url = { version = "2.2", default-features = false }
 notify = "4.0.16"
 getrandom = { version = "0.2", default-features = false }
 base64 = "0.13"
+dashmap = "5.3"
 
 [dev-dependencies]
 specit = {version  = "0.4.0", features = ["tokio"] }
