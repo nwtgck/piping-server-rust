@@ -43,8 +43,8 @@ struct DataReceiver {
 }
 
 pub struct PipingServer {
-    path_to_sender: Arc<RwLock<HashMap<String, DataSender>>>,
-    path_to_receiver: Arc<RwLock<HashMap<String, DataReceiver>>>,
+    path_to_sender: Arc<dashmap::DashMap<String, DataSender>>,
+    path_to_receiver: Arc<dashmap::DashMap<String, DataReceiver>>,
 }
 
 impl Clone for PipingServer {
@@ -59,8 +59,8 @@ impl Clone for PipingServer {
 impl PipingServer {
     pub fn new() -> Self {
         PipingServer {
-            path_to_sender: Arc::new(RwLock::new(HashMap::new())),
-            path_to_receiver: Arc::new(RwLock::new(HashMap::new())),
+            path_to_sender: Arc::new(dashmap::DashMap::new()),
+            path_to_receiver: Arc::new(dashmap::DashMap::new()),
         }
     }
 
@@ -213,8 +213,7 @@ impl PipingServer {
                             .unwrap();
                         return;
                     }
-                    let receiver_connected: bool =
-                        path_to_receiver.read().unwrap().contains_key(path);
+                    let receiver_connected: bool = path_to_receiver.contains_key(path);
                     // If a receiver has been connected already
                     if receiver_connected {
                         res_sender
@@ -225,10 +224,10 @@ impl PipingServer {
                             .unwrap();
                         return;
                     }
-                    let sender = path_to_sender.write().unwrap().remove(path);
+                    let sender = path_to_sender.remove(path);
                     match sender {
                         // If sender is found
-                        Some(data_sender) => {
+                        Some((_, data_sender)) => {
                             data_sender
                                 .res_body_streams_sender
                                 .write()
@@ -246,10 +245,7 @@ impl PipingServer {
                         }
                         // If sender is not found
                         None => {
-                            path_to_receiver
-                                .write()
-                                .unwrap()
-                                .insert(path.to_string(), DataReceiver { res_sender });
+                            path_to_receiver.insert(path.to_string(), DataReceiver { res_sender });
                         }
                     }
                 }
@@ -300,7 +296,7 @@ impl PipingServer {
                             .unwrap();
                         return;
                     }
-                    let sender_connected: bool = path_to_sender.read().unwrap().contains_key(path);
+                    let sender_connected: bool = path_to_sender.contains_key(path);
                     // If a sender has been connected already
                     if sender_connected {
                         res_sender
@@ -323,10 +319,10 @@ impl PipingServer {
                         .unwrap();
                     res_sender.send(sender_res).unwrap();
 
-                    let receiver = path_to_receiver.write().unwrap().remove(path);
+                    let receiver = path_to_receiver.remove(path);
                     match receiver {
                         // If receiver is found
-                        Some(data_receiver) => {
+                        Some((_, data_receiver)) => {
                             tx.unbounded_send(
                                 one_stream(Ok(Bytes::from(
                                     "[INFO] 1 receiver(s) has/have been connected.\n",
@@ -354,7 +350,7 @@ impl PipingServer {
                                 .boxed(),
                             )
                             .unwrap();
-                            path_to_sender.write().unwrap().insert(
+                            path_to_sender.insert(
                                 path.to_string(),
                                 DataSender {
                                     req,
