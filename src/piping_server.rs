@@ -7,7 +7,7 @@ use http::{Method, Request, Response};
 use hyper::body::Bytes;
 use hyper::Body;
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use url::Url;
 
 use crate::dynamic_resources;
@@ -31,10 +31,8 @@ pub const NO_SCRIPT_PATH_QUERY_PARAMETER_NAME: &str = "path";
 
 struct DataSender {
     req: Request<Body>,
-    res_body_streams_sender: RwLock<
-        mpsc::UnboundedSender<
-            Pin<Box<dyn Stream<Item = Result<Bytes, std::convert::Infallible>> + Send>>,
-        >,
+    res_body_streams_sender: mpsc::UnboundedSender<
+        Pin<Box<dyn Stream<Item = Result<Bytes, std::convert::Infallible>> + Send>>,
     >,
 }
 
@@ -230,8 +228,6 @@ impl PipingServer {
                         Some((_, data_sender)) => {
                             data_sender
                                 .res_body_streams_sender
-                                .write()
-                                .unwrap()
                                 .unbounded_send(
                                     one_stream(Ok(Bytes::from(
                                         "[INFO] A receiver was connected.\n",
@@ -334,7 +330,7 @@ impl PipingServer {
                                 path.to_string(),
                                 DataSender {
                                     req,
-                                    res_body_streams_sender: RwLock::new(tx),
+                                    res_body_streams_sender: (tx),
                                 },
                                 data_receiver,
                             )
@@ -354,7 +350,7 @@ impl PipingServer {
                                 path.to_string(),
                                 DataSender {
                                     req,
-                                    res_body_streams_sender: RwLock::new(tx),
+                                    res_body_streams_sender: (tx),
                                 },
                             );
                         }
@@ -505,8 +501,6 @@ async fn transfer(
 
     data_sender
         .res_body_streams_sender
-        .write()
-        .unwrap()
         .unbounded_send(
             one_stream(Ok(Bytes::from(
                 "[INFO] Start sending to 1 receiver(s)...\n",
