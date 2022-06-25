@@ -107,6 +107,22 @@ pub fn make_io_error(err: String) -> std::io::Error {
     std::io::Error::new(std::io::ErrorKind::Other, err)
 }
 
+fn read_private_keys(rd: &mut dyn std::io::BufRead) -> Result<Vec<Vec<u8>>, std::io::Error> {
+    let mut keys = Vec::<Vec<u8>>::new();
+
+    loop {
+        match rustls_pemfile::read_one(rd)? {
+            None => return Ok(keys),
+            Some(
+                rustls_pemfile::Item::RSAKey(key)
+                | rustls_pemfile::Item::PKCS8Key(key)
+                | rustls_pemfile::Item::ECKey(key),
+            ) => keys.push(key),
+            _ => {}
+        };
+    }
+}
+
 // (base: https://github.com/ctz/hyper-rustls/blob/5f073724f7b5eee3a2d72f0a86094fc2718b51cd/examples/server.rs)
 pub fn load_tls_config(
     cert_path: impl AsRef<std::path::Path>,
@@ -119,7 +135,7 @@ pub fn load_tls_config(
     // Load private key.
     let mut key_reader = std::io::BufReader::new(std::fs::File::open(key_path)?);
     // Load and return a single private key.
-    let key = rustls_pemfile::pkcs8_private_keys(&mut key_reader)
+    let key = read_private_keys(&mut key_reader)
         .map_err(|_| make_io_error("unable to load private key".to_owned()))?
         .remove(0);
     let certificates: Vec<rustls::Certificate> =

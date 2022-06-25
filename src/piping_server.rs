@@ -7,7 +7,7 @@ use http::{Method, Request, Response};
 use hyper::body::Bytes;
 use hyper::Body;
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use url::Url;
 
 use crate::dynamic_resources;
@@ -31,10 +31,8 @@ pub const NO_SCRIPT_PATH_QUERY_PARAMETER_NAME: &str = "path";
 
 struct DataSender {
     req: Request<Body>,
-    res_body_streams_sender: RwLock<
-        mpsc::UnboundedSender<
-            Pin<Box<dyn Stream<Item = Result<Bytes, std::convert::Infallible>> + Send>>,
-        >,
+    res_body_streams_sender: mpsc::UnboundedSender<
+        Pin<Box<dyn Stream<Item = Result<Bytes, std::convert::Infallible>> + Send>>,
     >,
 }
 
@@ -43,8 +41,8 @@ struct DataReceiver {
 }
 
 pub struct PipingServer {
-    path_to_sender: Arc<RwLock<HashMap<String, DataSender>>>,
-    path_to_receiver: Arc<RwLock<HashMap<String, DataReceiver>>>,
+    path_to_sender: Arc<dashmap::DashMap<String, DataSender>>,
+    path_to_receiver: Arc<dashmap::DashMap<String, DataReceiver>>,
 }
 
 impl Clone for PipingServer {
@@ -59,8 +57,8 @@ impl Clone for PipingServer {
 impl PipingServer {
     pub fn new() -> Self {
         PipingServer {
-            path_to_sender: Arc::new(RwLock::new(HashMap::new())),
-            path_to_receiver: Arc::new(RwLock::new(HashMap::new())),
+            path_to_sender: Arc::new(dashmap::DashMap::new()),
+            path_to_receiver: Arc::new(dashmap::DashMap::new()),
         }
     }
 
@@ -213,8 +211,7 @@ impl PipingServer {
                             .unwrap();
                         return;
                     }
-                    let receiver_connected: bool =
-                        path_to_receiver.read().unwrap().contains_key(path);
+                    let receiver_connected: bool = path_to_receiver.contains_key(path);
                     // If a receiver has been connected already
                     if receiver_connected {
                         res_sender
@@ -225,14 +222,12 @@ impl PipingServer {
                             .unwrap();
                         return;
                     }
-                    let sender = path_to_sender.write().unwrap().remove(path);
+                    let sender = path_to_sender.remove(path);
                     match sender {
                         // If sender is found
-                        Some(data_sender) => {
+                        Some((_, data_sender)) => {
                             data_sender
                                 .res_body_streams_sender
-                                .write()
-                                .unwrap()
                                 .unbounded_send(
                                     one_stream(Ok(Bytes::from(
                                         "[INFO] A receiver was connected.\n",
@@ -246,10 +241,7 @@ impl PipingServer {
                         }
                         // If sender is not found
                         None => {
-                            path_to_receiver
-                                .write()
-                                .unwrap()
-                                .insert(path.to_string(), DataReceiver { res_sender });
+                            path_to_receiver.insert(path.to_string(), DataReceiver { res_sender });
                         }
                     }
                 }
@@ -300,7 +292,7 @@ impl PipingServer {
                             .unwrap();
                         return;
                     }
-                    let sender_connected: bool = path_to_sender.read().unwrap().contains_key(path);
+                    let sender_connected: bool = path_to_sender.contains_key(path);
                     // If a sender has been connected already
                     if sender_connected {
                         res_sender
@@ -323,10 +315,10 @@ impl PipingServer {
                         .unwrap();
                     res_sender.send(sender_res).unwrap();
 
-                    let receiver = path_to_receiver.write().unwrap().remove(path);
+                    let receiver = path_to_receiver.remove(path);
                     match receiver {
                         // If receiver is found
-                        Some(data_receiver) => {
+                        Some((_, data_receiver)) => {
                             tx.unbounded_send(
                                 one_stream(Ok(Bytes::from(
                                     "[INFO] 1 receiver(s) has/have been connected.\n",
@@ -338,7 +330,7 @@ impl PipingServer {
                                 path.to_string(),
                                 DataSender {
                                     req,
-                                    res_body_streams_sender: RwLock::new(tx),
+                                    res_body_streams_sender: (tx),
                                 },
                                 data_receiver,
                             )
@@ -354,11 +346,11 @@ impl PipingServer {
                                 .boxed(),
                             )
                             .unwrap();
-                            path_to_sender.write().unwrap().insert(
+                            path_to_sender.insert(
                                 path.to_string(),
                                 DataSender {
                                     req,
-                                    res_body_streams_sender: RwLock::new(tx),
+                                    res_body_streams_sender: (tx),
                                 },
                             );
                         }
@@ -509,8 +501,6 @@ async fn transfer(
 
     data_sender
         .res_body_streams_sender
-        .write()
-        .unwrap()
         .unbounded_send(
             one_stream(Ok(Bytes::from(
                 "[INFO] Start sending to 1 receiver(s)...\n",

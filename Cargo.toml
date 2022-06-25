@@ -1,15 +1,15 @@
 [package]
 name = "piping-server"
-version = "0.13.0"
+version = "0.14.0"
 authors = ["Ryo Ota <nwtgck@nwtgck.org>"]
 edition = "2018"
 
 [dependencies]
 hyper = { version = "0.14", features = ["stream", "server", "http1", "http2", "tcp"] }
 futures = { version = "0.3", default-features = false, features = ["std"] }
-clap = { version = "3.1.18", features = ["derive"] }
+clap = { version = "3.2.6", features = ["derive"] }
 http = "0.2"
-tokio = { version = "1.18", features = ["rt-multi-thread", "macros", "net"] }
+tokio = { version = "1.19", features = ["rt-multi-thread", "macros", "net"] }
 rustls = "0.20"
 rustls-pemfile = "1.0"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
@@ -18,12 +18,13 @@ log = "0.4"
 env_logger = "0.9"
 pin-project-lite = "0.2"
 mime = "0.3"
-mpart-async = { version = "0.5", default-features = false }
+mpart-async = { version = "0.6", default-features = false }
 serde_urlencoded = "0.7"
 url = { version = "2.2", default-features = false }
 notify = "4.0.16"
 getrandom = { version = "0.2", default-features = false }
 base64 = "0.13"
+dashmap = "5.3"
 
 [dev-dependencies]
 specit = {version  = "0.4.0", features = ["tokio"] }
