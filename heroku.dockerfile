@@ -1,6 +1,6 @@
 # NOTE: Multi-stage Build
 
-FROM nwtgck/rust-musl-builder:1.61.0 as build
+FROM nwtgck/rust-musl-builder:1.62.0 as build
 
 # Copy to current directory and change the owner
 COPY --chown=rust:rust . ./
