@@ -33,6 +33,7 @@ jobs:
 
   cross_build:
     strategy:
+      max-parallel: 8
       matrix:
         target:
           - aarch64-unknown-linux-musl
