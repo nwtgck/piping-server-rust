@@ -43,6 +43,7 @@ jobs:
           - armv5te-unknown-linux-musleabi
           - armv7-linux-androideabi
           - armv7-unknown-linux-musleabihf
+          - armv7-unknown-linux-musleabi
           - i586-unknown-linux-musl
           - i686-linux-android
           - i686-unknown-linux-musl
