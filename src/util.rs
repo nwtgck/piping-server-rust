@@ -229,20 +229,6 @@ impl TokioIncoming<'_> {
     pub fn new(listener: &mut tokio::net::TcpListener) -> TokioIncoming<'_> {
         TokioIncoming { inner: listener }
     }
-
-    /// Attempts to poll `TcpStream` by polling inner `TcpListener` to accept
-    /// connection.
-    ///
-    /// If `TcpListener` isn't ready yet, `Poll::Pending` is returned and
-    /// current task will be notified by a waker.
-    #[allow(unused_mut)]
-    pub fn poll_accept(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<tokio::io::Result<TcpStream>> {
-        let (socket, _) = ready!(self.inner.poll_accept(cx))?;
-        Poll::Ready(Ok(socket))
-    }
 }
 
 impl futures::stream::Stream for TokioIncoming<'_> {
