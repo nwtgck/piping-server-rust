@@ -558,9 +558,9 @@ dependencies = [
 
 [[package]]
 name = "mpart-async"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "936eb66af28cefe58a914ef0a0f3057ce54d8466c1d34f6ea1bc6e1b2277aefc"
+checksum = "7ea6ab2359d45d2401bd7ba5ce5a67582f2abb872ea9ec17f78efb6ac3591864"
 dependencies = [
  "bytes",
  "futures-core",
