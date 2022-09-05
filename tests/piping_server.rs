@@ -369,6 +369,12 @@ async fn f() -> Result<(), BoxError> {
         "content-type, content-disposition, x-piping".to_owned()
     );
     assert_eq!(
+        get_header_value(&parts.headers, "access-control-expose-headers")
+            .unwrap()
+            .to_lowercase(),
+        "access-control-allow-headers".to_owned()
+    );
+    assert_eq!(
         get_header_value(&parts.headers, "access-control-max-age"),
         Some("86400")
     );
