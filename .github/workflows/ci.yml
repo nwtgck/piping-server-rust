@@ -33,6 +33,7 @@ jobs:
 
   cross_build:
     strategy:
+      max-parallel: 8
       matrix:
         target:
           - aarch64-unknown-linux-musl
@@ -42,6 +43,7 @@ jobs:
           - armv5te-unknown-linux-musleabi
           - armv7-linux-androideabi
           - armv7-unknown-linux-musleabihf
+          - armv7-unknown-linux-musleabi
           - i586-unknown-linux-musl
           - i686-linux-android
           - i686-unknown-linux-musl
@@ -52,8 +54,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install cross
-        run: curl -L https://github.com/rust-embedded/cross/releases/download/v0.2.1/cross-v0.2.1-x86_64-unknown-linux-gnu.tar.gz | tar xzf -
-      - run: ./cross build --target=${{ matrix.target }} --release --locked
+        run: cd /tmp && curl -L https://github.com/cross-rs/cross/releases/download/v0.2.2/cross-x86_64-unknown-linux-musl.tar.gz | tar xzf -
+      - run: /tmp/cross build --target=${{ matrix.target }} --release --locked
       - name: Archive binary
         run: |
           set -eu

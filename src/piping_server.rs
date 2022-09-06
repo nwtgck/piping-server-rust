@@ -369,6 +369,11 @@ impl PipingServer {
                             "Access-Control-Allow-Headers",
                             "Content-Type, Content-Disposition, X-Piping",
                         )
+                        // Expose "Access-Control-Allow-Headers" for Web browser detecting X-Piping feature
+                        .header(
+                            "Access-Control-Expose-Headers",
+                            "Access-Control-Allow-Headers",
+                        )
                         // Private Network Access preflights: https://developer.chrome.com/blog/private-network-access-preflight/
                         .option_header(
                             "Access-Control-Allow-Private-Network",

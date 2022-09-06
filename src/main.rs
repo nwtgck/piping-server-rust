@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::Parser as _;
 use core::convert::Infallible;
 use futures::stream::{StreamExt, TryStreamExt};
 use hyper::service::{make_service_fn, service_fn};
