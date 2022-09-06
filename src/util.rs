@@ -135,9 +135,13 @@ pub fn load_tls_config(
     // Load private key.
     let mut key_reader = std::io::BufReader::new(std::fs::File::open(key_path)?);
     // Load and return a single private key.
-    let key = read_private_keys(&mut key_reader)
-        .map_err(|_| make_io_error("unable to load private key".to_owned()))?
-        .remove(0);
+    let mut private_keys = read_private_keys(&mut key_reader)
+        .map_err(|_| make_io_error("unable to load private key".to_owned()))?;
+    let key = if private_keys.len() > 0 {
+        Ok(private_keys.remove(0))
+    } else {
+        Err(make_io_error("failed to get private key".to_owned()))
+    }?;
     let certificates: Vec<rustls::Certificate> =
         certs.into_iter().map(rustls::Certificate).collect();
     let mut cfg = rustls::ServerConfig::builder()
@@ -151,8 +155,8 @@ pub fn load_tls_config(
 }
 
 pub fn hot_reload_tls_cfg(
-    cert_path: String, // TODO: use impl AsRef<std::path::Path>
-    key_path: String,  // TODO: use impl AsRef<std::path::Path> + std::fmt::Display
+    cert_path: impl AsRef<std::path::Path> + Send + Sync + 'static,
+    key_path: impl AsRef<std::path::Path> + Send + Sync + std::fmt::Display + 'static,
 ) -> Arc<RwLock<Arc<rustls::ServerConfig>>> {
     let cert_path = Arc::new(cert_path);
     let key_path = Arc::new(key_path);
@@ -167,24 +171,29 @@ pub fn hot_reload_tls_cfg(
             use notify::Watcher;
             let (tx, rx) = std::sync::mpsc::channel();
 
-            let mut watcher: notify::RecommendedWatcher =
-                notify::Watcher::new(tx, std::time::Duration::from_secs(5))?;
+            let mut watcher: notify::RecommendedWatcher = notify::Watcher::new(
+                tx,
+                notify::Config::default().with_poll_interval(std::time::Duration::from_secs(5)),
+            )?;
 
-            watcher.watch(cert_path.deref(), notify::RecursiveMode::NonRecursive)?;
-            watcher.watch(key_path.deref(), notify::RecursiveMode::NonRecursive)?;
+            watcher.watch(
+                cert_path.deref().as_ref(),
+                notify::RecursiveMode::NonRecursive,
+            )?;
+            watcher.watch(
+                key_path.deref().as_ref(),
+                notify::RecursiveMode::NonRecursive,
+            )?;
 
             loop {
                 match rx.recv() {
-                    Ok(event) => {
-                        log::info!("Certificates change detected: {:?}", event);
-                        match load_tls_config(cert_path.deref(), key_path.deref()) {
-                            Ok(tls_cfg) => {
-                                *(tls_cfg_rwlock.clone().write().unwrap()) = Arc::new(tls_cfg);
-                                log::info!("Successfully new certificates loaded");
-                            }
-                            Err(e) => log::error!("Failed to load new certificates: {:?}", e),
+                    Ok(_event) => match load_tls_config(cert_path.deref(), key_path.deref()) {
+                        Ok(tls_cfg) => {
+                            *(tls_cfg_rwlock.clone().write().unwrap()) = Arc::new(tls_cfg);
+                            log::info!("Successfully new certificates loaded");
                         }
-                    }
+                        Err(e) => log::error!("Failed to load new certificates: {:?}", e),
+                    },
                     Err(e) => log::error!("Watch certificates error: {:?}", e),
                 }
             }
