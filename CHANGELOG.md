@@ -5,6 +5,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.14.1] - 2022-09-06
+### Changed
+* Update dependencies
+* (Docker) Use Rust version 1.63.0 in build
+* Allow Web browser to detect X-Piping feature in preflight request
+
+### Added
+* Add armv7-unknown-linux-musleabi target
+
+### Fixed
+* Fix hot reload not to panic
+
 ## [0.14.0] - 2022-06-25
 ### Changed
 * Update dependencies
@@ -232,7 +244,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.14.1...HEAD
+[0.14.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.12.1...v0.13.0
 [0.12.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.12.0...v0.12.1
