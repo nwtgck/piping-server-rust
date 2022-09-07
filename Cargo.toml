@@ -20,7 +20,7 @@ pin-project-lite = "0.2"
 mime = "0.3"
 mpart-async = { version = "0.6", default-features = false }
 serde_urlencoded = "0.7"
-url = { version = "2.2", default-features = false }
+url = { version = "2.3", default-features = false }
 notify = "5.0.0"
 getrandom = { version = "0.2", default-features = false }
 base64 = "0.13"
