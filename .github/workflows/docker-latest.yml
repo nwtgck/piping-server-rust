@@ -1,0 +1,32 @@
+name: Docker push for latest
+
+on:
+  push:
+    branches:
+    - master
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+  schedule:
+    - cron: '*/30 * * * *'
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - run: git fetch --unshallow
+    - name: Build & Push latest version
+      run: |
+        set -eu
+        DOCKER_REPO=nwtgck/piping-server-rust
+        LATEST_TAG=$(ruby -e 'puts `git tag`.each_line.map{|t| begin {raw_tag: t, gver: Gem::Version::new(t.sub(/^v/, ""))}; rescue; nil end}.compact.max_by{|v| v[:gver]}[:raw_tag]')
+        echo "Latest tag: $LATEST_TAG"
+        git reset --hard $LATEST_TAG
+        git status
+        docker build -t ${DOCKER_REPO}:${LATEST_TAG} .
+        docker tag ${DOCKER_REPO}:${LATEST_TAG} ${DOCKER_REPO}:latest
+        echo ${{ secrets.DOCKER_HUB_TOKEN }} | docker login -u nwtgck --password-stdin
+        docker push ${DOCKER_REPO}:${LATEST_TAG}
+        docker push ${DOCKER_REPO}:latest

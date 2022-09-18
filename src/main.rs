@@ -1,8 +1,9 @@
+use clap::Parser as _;
 use core::convert::Infallible;
 use futures::stream::{StreamExt, TryStreamExt};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::Server;
-use structopt::StructOpt;
+use std::sync::{Arc, RwLock};
 use tokio::net::TcpListener;
 use tokio_rustls::TlsAcceptor;
 
@@ -11,54 +12,60 @@ use piping_server::req_res_handler::req_res_handler;
 use piping_server::util;
 
 /// Piping Server in Rust
-#[derive(StructOpt, Debug)]
-#[structopt(name = "piping-server")]
-#[structopt(rename_all = "kebab-case")]
-struct Opt {
+#[derive(clap::Parser, Debug)]
+#[clap(name = "piping-server")]
+#[clap(about, version)]
+#[clap(global_setting(clap::AppSettings::DeriveDisplayOrder))]
+struct Args {
+    /// Bind address, either IPv4 or IPv6 (e.g. 127.0.0.1, ::1)
+    #[clap(long, default_value = "0.0.0.0")]
+    host: std::net::IpAddr,
     /// HTTP port
-    #[structopt(long, default_value = "8080")]
+    #[clap(long, default_value = "8080")]
     http_port: u16,
-    #[structopt(long)]
+    #[clap(long)]
     /// Enable HTTPS
     enable_https: bool,
     /// HTTPS port
-    #[structopt(long)]
+    #[clap(long)]
     https_port: Option<u16>,
     /// Certification path
-    #[structopt(long)]
+    #[clap(long)]
     crt_path: Option<String>,
     /// Private key path
-    #[structopt(long)]
+    #[clap(long)]
     key_path: Option<String>,
 }
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    // Parse options
-    let opt = Opt::from_args();
+    // Parse arguments
+    let args = Args::parse();
 
     let mut tcp: TcpListener;
-    let tls_acceptor: TlsAcceptor;
+    let tls_cfg_rwlock_arc: Arc<RwLock<Arc<rustls::ServerConfig>>>;
 
     let piping_server = &PipingServer::new();
 
     // Set default log level
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    let https_server = if opt.enable_https {
-        if let (Some(https_port), Some(crt_path), Some(key_path)) =
-            (opt.https_port, opt.crt_path, opt.key_path)
-        {
-            let tls_cfg = util::load_tls_config(crt_path, key_path)?;
+    log::info!(
+        "Piping Server (Rust) {version}",
+        version = env!("CARGO_PKG_VERSION")
+    );
 
-            let addr: std::net::SocketAddr = ([0, 0, 0, 0], https_port).into();
+    let https_server = if args.enable_https {
+        if let (Some(https_port), Some(crt_path), Some(key_path)) =
+            (args.https_port, args.crt_path, args.key_path)
+        {
+            tls_cfg_rwlock_arc = util::hot_reload_tls_cfg(crt_path, key_path);
+
+            let addr: std::net::SocketAddr = (args.host, https_port).into();
             // Create a TCP listener via tokio.
             tcp = TcpListener::bind(&addr).await?;
-            tls_acceptor = TlsAcceptor::from(std::sync::Arc::new(tls_cfg));
-            // let tls_acceptor = tls_acceptor_opt.as_ref().unwrap();
             // Prepare a long-running future stream to accept and serve clients.
-            let incoming_tls_stream = tcp
-                .incoming()
+            let incoming_tls_stream = util::TokioIncoming::new(&mut tcp)
                 .map_err(|e| util::make_io_error(format!("Incoming failed: {:?}", e)))
                 // (base: https://github.com/cloudflare/wrangler/pull/1485/files)
                 .filter_map(|s| async {
@@ -69,7 +76,10 @@ async fn main() -> std::io::Result<()> {
                             return None;
                         }
                     };
-                    match tls_acceptor.accept(client).await {
+
+                    let tls_cfg: Arc<rustls::ServerConfig> =
+                        (*tls_cfg_rwlock_arc.read().unwrap()).clone();
+                    match TlsAcceptor::from(tls_cfg).accept(client).await {
                         Ok(x) => Some(Ok::<_, std::io::Error>(x)),
                         Err(e) => {
                             log::error!("Client connection error: {}", e);
@@ -79,12 +89,13 @@ async fn main() -> std::io::Result<()> {
                 });
             let https_svc = make_service_fn(move |_| {
                 let piping_server = piping_server.clone();
-                let handler =
-                    req_res_handler(move |req, res_sender| piping_server.handler(req, res_sender));
+                let handler = req_res_handler(move |req, res_sender| {
+                    piping_server.handler(true, req, res_sender)
+                });
                 futures::future::ok::<_, Infallible>(service_fn(handler))
             });
             let https_server = Server::builder(util::HyperAcceptor {
-                acceptor: Box::pin(incoming_tls_stream),
+                acceptor: incoming_tls_stream,
             })
             .serve(https_svc);
             futures::future::Either::Left(https_server)
@@ -100,13 +111,13 @@ async fn main() -> std::io::Result<()> {
     let http_svc = make_service_fn(|_| {
         let piping_server = piping_server.clone();
         let handler =
-            req_res_handler(move |req, res_sender| piping_server.handler(req, res_sender));
+            req_res_handler(move |req, res_sender| piping_server.handler(false, req, res_sender));
         futures::future::ok::<_, Infallible>(service_fn(handler))
     });
-    let http_server = Server::bind(&([0, 0, 0, 0], opt.http_port).into()).serve(http_svc);
+    let http_server = Server::bind(&(args.host, args.http_port).into()).serve(http_svc);
 
-    log::info!("HTTP server is running on {}...", opt.http_port);
-    if let Some(https_port) = opt.https_port {
+    log::info!("HTTP server is running on {}...", args.http_port);
+    if let Some(https_port) = args.https_port {
         log::info!("HTTPS server is running on {:?}...", https_port);
     }
     match futures::future::join(http_server, https_server).await {
