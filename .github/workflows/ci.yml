@@ -14,7 +14,7 @@ jobs:
       matrix:
         runs-on:
           - ubuntu-20.04
-          - macOS-10.15
+          - macOS-11
     runs-on: ${{ matrix.runs-on }}
     steps:
     - uses: actions/checkout@v2
