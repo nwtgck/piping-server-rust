@@ -67,7 +67,7 @@ jobs:
             cp ./target/${{ matrix.target }}/release/piping-server ./piping-server-${{ matrix.target }}
             tar zcf ./piping-server-${{ matrix.target }}.tar.gz ./piping-server-${{ matrix.target }}
           fi
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: cross_build_artifact
           path: |
@@ -144,7 +144,7 @@ jobs:
         mkdir ./piping-server-${{ matrix.target }}
         cp ./target/${{ matrix.target }}/release/piping-server ./piping-server-${{ matrix.target }}
         tar zcf ./piping-server-${{ matrix.target }}.tar.gz ./piping-server-${{ matrix.target }}
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       with:
         name: mac_build_artifact
         path: |
