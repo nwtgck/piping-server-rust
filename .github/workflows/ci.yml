@@ -6,7 +6,7 @@ jobs:
   cargo_fmt:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - run: cargo fmt --all -- --check
 
   cargo_test:
@@ -17,14 +17,14 @@ jobs:
           - macOS-11
     runs-on: ${{ matrix.runs-on }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - run: cargo test -- --color=always --nocapture
 
   # MSRV (minimum supported Rust version)
   cargo_test_msrv:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: 1.60.0
@@ -52,7 +52,7 @@ jobs:
           - x86_64-unknown-linux-musl
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install cross
         run: cd /tmp && curl -L https://github.com/cross-rs/cross/releases/download/v0.2.4/cross-x86_64-unknown-linux-musl.tar.gz | tar xzf -
       - run: /tmp/cross build --target=${{ matrix.target }} --release --locked
@@ -137,7 +137,7 @@ jobs:
           - aarch64-apple-darwin
     runs-on: macOS-11
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - run: rustup target add ${{ matrix.target }}
     - run: cargo build --target=${{ matrix.target }} --release --locked
     - name: Archive binary
@@ -155,7 +155,7 @@ jobs:
   docker:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - run: docker build -t piping-server-rust .
     - name: Operational test with Docker image
       run: |
