@@ -237,9 +237,3 @@ jobs:
         REPO=$(echo $GITHUB_REPOSITORY | cut -d / -f 2)
         curl -L https://github.com/tcnksm/ghr/releases/download/v0.14.0/ghr_v0.14.0_linux_amd64.tar.gz | tar xzf -
         ./ghr_v0.14.0_linux_amd64/ghr -t ${{ secrets.GITHUB_TOKEN }} -u ${GITHUB_ACTOR} -r ${REPO} -c ${GITHUB_SHA} -delete ${VERSION} ./publish_dir
-
-  heroku_docker_build:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - run: docker build -t piping-server-rust -f ./heroku.dockerfile .

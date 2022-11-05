@@ -1,8 +1,6 @@
 # piping-server
 [![CI](https://github.com/nwtgck/piping-server-rust/workflows/CI/badge.svg)](https://github.com/nwtgck/piping-server-rust/actions) [![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/nwtgck/piping-server-rust)](https://hub.docker.com/r/nwtgck/piping-server-rust)
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
-
 [Piping Server](https://github.com/nwtgck/piping-server) written in Rust
 
 ## Purpose
@@ -58,19 +56,13 @@ curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.14.0/p
 
 Executable files are available on [GitHub Release](https://github.com/nwtgck/piping-server-rust/releases).
 
-### Way 6: Heroku
-
-Click the button bellow to deploy.
-
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
-
-### Way 7: Replit
+### Way 6: Replit
 
 Click <kbd>Fork</kbd> button in the link below and fork it.
 
 <https://replit.com/@nwtgck/piping-rust>
 
-### Way 8: Build and run by yourself
+### Way 7: Build and run by yourself
 You can clone, build and run `piping-server` as follows.
 
 ```bash
