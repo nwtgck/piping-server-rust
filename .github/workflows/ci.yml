@@ -80,7 +80,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - name: Download the artifact (cross build)
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: cross_build_artifact
     - name: Extract binary
@@ -216,12 +216,12 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - name: Download the artifact (cross build)
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: cross_build_artifact
         path: ./publish_dir
     - name: Download the artifact (macOS)
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: mac_build_artifact
         path: ./publish_dir
