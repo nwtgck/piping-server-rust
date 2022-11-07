@@ -29,4 +29,4 @@ dashmap = "5.3"
 [dev-dependencies]
 specit = {version  = "0.4.0", features = ["tokio"] }
 hyper = { version = "0.14", features = [ "client" ] }
-regex = "1.6"
+regex = "1.7"
