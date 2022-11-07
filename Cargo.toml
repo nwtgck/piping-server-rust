@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 hyper = { version = "0.14", features = ["stream", "server", "http1", "http2", "tcp"] }
 futures = { version = "0.3", default-features = false, features = ["std"] }
-clap = { version = "4.0.18", features = ["derive"] }
+clap = { version = "4.0.22", features = ["derive"] }
 http = "0.2"
 tokio = { version = "1.21", features = ["rt-multi-thread", "macros", "net"] }
 rustls = "0.20"
