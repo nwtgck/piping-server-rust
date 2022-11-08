@@ -206,6 +206,14 @@ jobs:
         docker logs piping
         # Delete container
         docker rm -f piping
+    - name: Push if branch is develop
+      if: github.ref == 'refs/heads/develop'
+      run: |
+        set -eu
+        echo ${{ secrets.DOCKER_HUB_TOKEN }} | docker login -u nwtgck --password-stdin
+        GIT_BRANCH=${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}
+        docker tag piping-server-rust nwtgck/piping-server-rust:${GIT_BRANCH}
+        docker push nwtgck/piping-server-rust:${GIT_BRANCH}
 
   release_if_tag_exits:
     needs:
