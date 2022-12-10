@@ -15,7 +15,6 @@ use piping_server::util;
 #[derive(clap::Parser, Debug)]
 #[clap(name = "piping-server")]
 #[clap(about, version)]
-#[clap(global_setting(clap::AppSettings::DeriveDisplayOrder))]
 struct Args {
     /// Bind address, either IPv4 or IPv6 (e.g. 127.0.0.1, ::1)
     #[clap(long, default_value = "0.0.0.0")]

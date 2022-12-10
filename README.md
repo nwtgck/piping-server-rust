@@ -1,8 +1,6 @@
 # piping-server
 [![CI](https://github.com/nwtgck/piping-server-rust/workflows/CI/badge.svg)](https://github.com/nwtgck/piping-server-rust/actions) [![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/nwtgck/piping-server-rust)](https://hub.docker.com/r/nwtgck/piping-server-rust)
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
-
 [Piping Server](https://github.com/nwtgck/piping-server) written in Rust
 
 ## Purpose
@@ -58,19 +56,13 @@ curl -L https://github.com/nwtgck/piping-server-rust/releases/download/v0.14.0/p
 
 Executable files are available on [GitHub Release](https://github.com/nwtgck/piping-server-rust/releases).
 
-### Way 6: Heroku
-
-Click the button bellow to deploy.
-
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
-
-### Way 7: Replit
+### Way 6: Replit
 
 Click <kbd>Fork</kbd> button in the link below and fork it.
 
 <https://replit.com/@nwtgck/piping-rust>
 
-### Way 8: Build and run by yourself
+### Way 7: Build and run by yourself
 You can clone, build and run `piping-server` as follows.
 
 ```bash
@@ -86,20 +78,17 @@ cargo build --release
 ### Server-side help
 
 ```txt
-piping-server 0.14.0
 Piping Server in Rust
 
-USAGE:
-    piping-server [OPTIONS]
+Usage: piping-server [OPTIONS]
 
-OPTIONS:
-        --host <HOST>                Bind address, either IPv4 or IPv6 (e.g. 127.0.0.1, ::1)
-                                     [default: 0.0.0.0]
-        --http-port <HTTP_PORT>      HTTP port [default: 8080]
-        --enable-https               Enable HTTPS
-        --https-port <HTTPS_PORT>    HTTPS port
-        --crt-path <CRT_PATH>        Certification path
-        --key-path <KEY_PATH>        Private key path
-    -h, --help                       Print help information
-    -V, --version                    Print version information
+Options:
+      --host <HOST>              Bind address, either IPv4 or IPv6 (e.g. 127.0.0.1, ::1) [default: 0.0.0.0]
+      --http-port <HTTP_PORT>    HTTP port [default: 8080]
+      --enable-https             Enable HTTPS
+      --https-port <HTTPS_PORT>  HTTPS port
+      --crt-path <CRT_PATH>      Certification path
+      --key-path <KEY_PATH>      Private key path
+  -h, --help                     Print help information
+  -V, --version                  Print version information
 ```

@@ -1,5 +1,0 @@
-build:
-  docker:
-    web: heroku.dockerfile
-run:
-  web: /usr/local/bin/piping-server --http-port=$PORT
