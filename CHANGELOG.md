@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.15.0] - 2022-12-10
+### Changed
+* Update dependencies
+* Update --help output by changing internal library
+* Increase MSRV to 1.60
+* Drop Heroku support removing heroku.yml
+* (Docker) Use Rust version 1.65.0 in build
+
 ## [0.14.1] - 2022-09-06
 ### Changed
 * Update dependencies
@@ -244,7 +252,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.14.1...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.14.1...v0.15.0
 [0.14.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.12.1...v0.13.0
