@@ -101,10 +101,7 @@ impl PipingServer {
                             .header("Access-Control-Allow-Origin", "*")
                             .header(
                                 "Content-Security-Policy",
-                                format!(
-                                    "default-src 'none'; style-src 'nonce-{style_nonce}'",
-                                    style_nonce = style_nonce,
-                                ),
+                                format!("default-src 'none'; style-src 'nonce-{style_nonce}'"),
                             )
                             .body(Body::from(html))
                             .unwrap();
@@ -117,7 +114,7 @@ impl PipingServer {
                             .status(200)
                             .header("Content-Type", "text/plain")
                             .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from(format!("{} (Rust)\n", version)))
+                            .body(Body::from(format!("{version} (Rust)\n")))
                             .unwrap();
                         res_sender.send(res).unwrap();
                         return;
@@ -139,7 +136,7 @@ impl PipingServer {
                         } else {
                             "http"
                         };
-                        let base_url = Url::parse(format!("{}://{}", schema, host).as_str())
+                        let base_url = Url::parse(format!("{schema}://{host}").as_str())
                             .unwrap_or_else(|_| "http://hostname/".parse().unwrap());
                         let help = dynamic_resources::help(&base_url);
                         let res = Response::builder()
@@ -197,8 +194,7 @@ impl PipingServer {
                     if n_receivers <= 0 {
                         res_sender
                             .send(rejection_response(Body::from(format!(
-                                "[ERROR] n should > 0, but n = {n_receivers}.\n",
-                                n_receivers = n_receivers
+                                "[ERROR] n should > 0, but n = {n_receivers}.\n"
                             ))))
                             .unwrap();
                         return;
@@ -216,8 +212,7 @@ impl PipingServer {
                     if receiver_connected {
                         res_sender
                             .send(rejection_response(Body::from(format!(
-                                "[ERROR] Another receiver has been connected on '{}'.\n",
-                                path
+                                "[ERROR] Another receiver has been connected on '{path}'.\n",
                             ))))
                             .unwrap();
                         return;
@@ -248,7 +243,7 @@ impl PipingServer {
                 &Method::POST | &Method::PUT => {
                     if reserved_paths::VALUES.contains(&path) {
                         // Reject reserved path sending
-                        res_sender.send(rejection_response(Body::from(format!("[ERROR] Cannot send to the reserved path '{}'. (e.g. '/mypath123')\n", path)))).unwrap();
+                        res_sender.send(rejection_response(Body::from(format!("[ERROR] Cannot send to the reserved path '{path}'. (e.g. '/mypath123')\n")))).unwrap();
                         return;
                     }
                     // Notify that Content-Range is not supported
@@ -278,8 +273,7 @@ impl PipingServer {
                     if n_receivers <= 0 {
                         res_sender
                             .send(rejection_response(Body::from(format!(
-                                "[ERROR] n should > 0, but n = {n_receivers}.\n",
-                                n_receivers = n_receivers
+                                "[ERROR] n should > 0, but n = {n_receivers}.\n"
                             ))))
                             .unwrap();
                         return;
@@ -297,8 +291,7 @@ impl PipingServer {
                     if sender_connected {
                         res_sender
                             .send(rejection_response(Body::from(format!(
-                                "[ERROR] Another sender has been connected on '{}'.\n",
-                                path
+                                "[ERROR] Another sender has been connected on '{path}'.\n",
                             ))))
                             .unwrap();
                         return;
@@ -475,7 +468,7 @@ async fn transfer(
     data_receiver: DataReceiver,
 ) -> Result<(), std::io::Error> {
     let (data_sender_parts, data_sender_body) = data_sender.req.into_parts();
-    log::info!("Transfer start: '{}'", path);
+    log::info!("Transfer start: '{path}'");
     // Extract transfer headers and body even when request is multipart
     let transfer_request = get_transfer_request(&data_sender_parts, data_sender_body).await?;
     // The finish_waiter will tell when the body is finished
@@ -521,7 +514,7 @@ async fn transfer(
                 one_stream(Ok(Bytes::from("[INFO] Sent successfully!\n"))),
             )
             .chain(one_stream(Ok(Bytes::new())).map(move |x| {
-                log::info!("Transfer end: '{}'", path);
+                log::info!("Transfer end: '{path}'");
                 x
             }))
             .boxed(),

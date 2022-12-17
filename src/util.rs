@@ -192,9 +192,9 @@ pub fn hot_reload_tls_cfg(
                             *(tls_cfg_rwlock.clone().write().unwrap()) = Arc::new(tls_cfg);
                             log::info!("Successfully new certificates loaded");
                         }
-                        Err(e) => log::error!("Failed to load new certificates: {:?}", e),
+                        Err(e) => log::error!("Failed to load new certificates: {e:?}"),
                     },
-                    Err(e) => log::error!("Watch certificates error: {:?}", e),
+                    Err(e) => log::error!("Watch certificates error: {e:?}"),
                 }
             }
         }
