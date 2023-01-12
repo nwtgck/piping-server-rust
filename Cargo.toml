@@ -23,7 +23,7 @@ serde_urlencoded = "0.7"
 url = { version = "2.3", default-features = false }
 notify = "5.0.0"
 getrandom = { version = "0.2", default-features = false }
-base64 = "0.20"
+base64 = "0.21"
 dashmap = "5.3"
 
 [dev-dependencies]
