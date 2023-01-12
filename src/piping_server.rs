@@ -1,3 +1,4 @@
+use base64::Engine as _;
 use core::pin::Pin;
 use futures::channel::mpsc;
 use futures::channel::oneshot;
@@ -92,7 +93,7 @@ impl PipingServer {
                         let style_nonce: String = {
                             let mut nonce_bytes = [0u8; 16];
                             getrandom::getrandom(&mut nonce_bytes).unwrap();
-                            base64::encode(nonce_bytes)
+                            base64::engine::general_purpose::STANDARD.encode(nonce_bytes)
                         };
                         let html = dynamic_resources::no_script_html(&query_params, &style_nonce);
                         let res = Response::builder()
