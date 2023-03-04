@@ -489,11 +489,19 @@ async fn transfer(
             .await
             .unwrap();
         // Wait for sender's request body finished
-        sender_req_body_finish_waiter.await.unwrap();
-        data_sender_res_body_sender
-            .send_data(Bytes::from("[INFO] Sent successfully!\n"))
-            .await
-            .unwrap();
+        if let Ok(_) = sender_req_body_finish_waiter.await {
+            data_sender_res_body_sender
+                .send_data(Bytes::from("[INFO] Sent successfully!\n"))
+                .await
+                .unwrap();
+        } else {
+            data_sender_res_body_sender
+                .send_data(Bytes::from(
+                    "[INFO] All receiver(s) was/were halfway disconnected.\n",
+                ))
+                .await
+                .unwrap();
+        }
         log::info!("Transfer end: '{path}'");
     });
     return Ok(());
