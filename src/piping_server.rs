@@ -1,8 +1,6 @@
-use core::pin::Pin;
-use futures::channel::mpsc;
+use base64::Engine as _;
 use futures::channel::oneshot;
-use futures::future::FutureExt;
-use futures::stream::{Stream, StreamExt, TryStreamExt};
+use futures::stream::TryStreamExt;
 use http::{Method, Request, Response};
 use hyper::body::Bytes;
 use hyper::Body;
@@ -12,8 +10,8 @@ use url::Url;
 
 use crate::dynamic_resources;
 use crate::util::{
-    finish_detectable_stream, one_stream, query_param_to_hash_map, FinishDetectableStream,
-    HeaderValuesBuilder, OptionHeaderBuilder,
+    finish_detectable_stream, query_param_to_hash_map, FinishDetectableStream, HeaderValuesBuilder,
+    OptionHeaderBuilder,
 };
 
 pub mod reserved_paths {
@@ -31,9 +29,7 @@ pub const NO_SCRIPT_PATH_QUERY_PARAMETER_NAME: &str = "path";
 
 struct DataSender {
     req: Request<Body>,
-    res_body_streams_sender: mpsc::UnboundedSender<
-        Pin<Box<dyn Stream<Item = Result<Bytes, std::convert::Infallible>> + Send>>,
-    >,
+    res_body_sender: hyper::body::Sender,
 }
 
 struct DataReceiver {
@@ -92,7 +88,7 @@ impl PipingServer {
                         let style_nonce: String = {
                             let mut nonce_bytes = [0u8; 16];
                             getrandom::getrandom(&mut nonce_bytes).unwrap();
-                            base64::encode(nonce_bytes)
+                            base64::engine::general_purpose::STANDARD.encode(nonce_bytes)
                         };
                         let html = dynamic_resources::no_script_html(&query_params, &style_nonce);
                         let res = Response::builder()
@@ -101,10 +97,7 @@ impl PipingServer {
                             .header("Access-Control-Allow-Origin", "*")
                             .header(
                                 "Content-Security-Policy",
-                                format!(
-                                    "default-src 'none'; style-src 'nonce-{style_nonce}'",
-                                    style_nonce = style_nonce,
-                                ),
+                                format!("default-src 'none'; style-src 'nonce-{style_nonce}'"),
                             )
                             .body(Body::from(html))
                             .unwrap();
@@ -117,7 +110,7 @@ impl PipingServer {
                             .status(200)
                             .header("Content-Type", "text/plain")
                             .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from(format!("{} (Rust)\n", version)))
+                            .body(Body::from(format!("{version} (Rust)\n")))
                             .unwrap();
                         res_sender.send(res).unwrap();
                         return;
@@ -139,7 +132,7 @@ impl PipingServer {
                         } else {
                             "http"
                         };
-                        let base_url = Url::parse(format!("{}://{}", schema, host).as_str())
+                        let base_url = Url::parse(format!("{schema}://{host}").as_str())
                             .unwrap_or_else(|_| "http://hostname/".parse().unwrap());
                         let help = dynamic_resources::help(&base_url);
                         let res = Response::builder()
@@ -197,8 +190,7 @@ impl PipingServer {
                     if n_receivers <= 0 {
                         res_sender
                             .send(rejection_response(Body::from(format!(
-                                "[ERROR] n should > 0, but n = {n_receivers}.\n",
-                                n_receivers = n_receivers
+                                "[ERROR] n should > 0, but n = {n_receivers}.\n"
                             ))))
                             .unwrap();
                         return;
@@ -216,8 +208,7 @@ impl PipingServer {
                     if receiver_connected {
                         res_sender
                             .send(rejection_response(Body::from(format!(
-                                "[ERROR] Another receiver has been connected on '{}'.\n",
-                                path
+                                "[ERROR] Another receiver has been connected on '{path}'.\n",
                             ))))
                             .unwrap();
                         return;
@@ -225,15 +216,11 @@ impl PipingServer {
                     let sender = path_to_sender.remove(path);
                     match sender {
                         // If sender is found
-                        Some((_, data_sender)) => {
+                        Some((_, mut data_sender)) => {
                             data_sender
-                                .res_body_streams_sender
-                                .unbounded_send(
-                                    one_stream(Ok(Bytes::from(
-                                        "[INFO] A receiver was connected.\n",
-                                    )))
-                                    .boxed(),
-                                )
+                                .res_body_sender
+                                .send_data(Bytes::from("[INFO] A receiver was connected.\n"))
+                                .await
                                 .unwrap();
                             transfer(path.to_string(), data_sender, DataReceiver { res_sender })
                                 .await
@@ -248,7 +235,7 @@ impl PipingServer {
                 &Method::POST | &Method::PUT => {
                     if reserved_paths::VALUES.contains(&path) {
                         // Reject reserved path sending
-                        res_sender.send(rejection_response(Body::from(format!("[ERROR] Cannot send to the reserved path '{}'. (e.g. '/mypath123')\n", path)))).unwrap();
+                        res_sender.send(rejection_response(Body::from(format!("[ERROR] Cannot send to the reserved path '{path}'. (e.g. '/mypath123')\n")))).unwrap();
                         return;
                     }
                     // Notify that Content-Range is not supported
@@ -278,8 +265,7 @@ impl PipingServer {
                     if n_receivers <= 0 {
                         res_sender
                             .send(rejection_response(Body::from(format!(
-                                "[ERROR] n should > 0, but n = {n_receivers}.\n",
-                                n_receivers = n_receivers
+                                "[ERROR] n should > 0, but n = {n_receivers}.\n"
                             ))))
                             .unwrap();
                         return;
@@ -297,17 +283,13 @@ impl PipingServer {
                     if sender_connected {
                         res_sender
                             .send(rejection_response(Body::from(format!(
-                                "[ERROR] Another sender has been connected on '{}'.\n",
-                                path
+                                "[ERROR] Another sender has been connected on '{path}'.\n",
                             ))))
                             .unwrap();
                         return;
                     }
 
-                    let (tx, rx) = mpsc::unbounded::<
-                        Pin<Box<dyn Stream<Item = Result<Bytes, std::convert::Infallible>> + Send>>,
-                    >();
-                    let body = hyper::body::Body::wrap_stream(rx.flatten());
+                    let (mut res_body_sender, body) = Body::channel();
                     let sender_res = Response::builder()
                         .header("Content-Type", "text/plain")
                         .header("Access-Control-Allow-Origin", "*")
@@ -319,18 +301,17 @@ impl PipingServer {
                     match receiver {
                         // If receiver is found
                         Some((_, data_receiver)) => {
-                            tx.unbounded_send(
-                                one_stream(Ok(Bytes::from(
+                            res_body_sender
+                                .send_data(Bytes::from(
                                     "[INFO] 1 receiver(s) has/have been connected.\n",
-                                )))
-                                .boxed(),
-                            )
-                            .unwrap();
+                                ))
+                                .await
+                                .unwrap();
                             transfer(
                                 path.to_string(),
                                 DataSender {
                                     req,
-                                    res_body_streams_sender: (tx),
+                                    res_body_sender,
                                 },
                                 data_receiver,
                             )
@@ -339,18 +320,15 @@ impl PipingServer {
                         }
                         // If receiver is not found
                         None => {
-                            tx.unbounded_send(
-                                one_stream(Ok(Bytes::from(
-                                    "[INFO] Waiting for 1 receiver(s)...\n",
-                                )))
-                                .boxed(),
-                            )
-                            .unwrap();
+                            res_body_sender
+                                .send_data(Bytes::from("[INFO] Waiting for 1 receiver(s)...\n"))
+                                .await
+                                .unwrap();
                             path_to_sender.insert(
                                 path.to_string(),
                                 DataSender {
                                     req,
-                                    res_body_streams_sender: (tx),
+                                    res_body_sender,
                                 },
                             );
                         }
@@ -475,7 +453,7 @@ async fn transfer(
     data_receiver: DataReceiver,
 ) -> Result<(), std::io::Error> {
     let (data_sender_parts, data_sender_body) = data_sender.req.into_parts();
-    log::info!("Transfer start: '{}'", path);
+    log::info!("Transfer start: '{path}'");
     // Extract transfer headers and body even when request is multipart
     let transfer_request = get_transfer_request(&data_sender_parts, data_sender_body).await?;
     // The finish_waiter will tell when the body is finished
@@ -504,29 +482,28 @@ async fn transfer(
     // Return response to receiver
     data_receiver.res_sender.send(receiver_res).unwrap();
 
-    data_sender
-        .res_body_streams_sender
-        .unbounded_send(
-            one_stream(Ok(Bytes::from(
-                "[INFO] Start sending to 1 receiver(s)...\n",
-            )))
-            .chain(
-                // Wait for sender's request body finished
-                sender_req_body_finish_waiter
-                    .into_stream()
-                    .map(|_| Ok(Bytes::new())),
-            )
-            .chain(
-                // Notify sender when sending finished
-                one_stream(Ok(Bytes::from("[INFO] Sent successfully!\n"))),
-            )
-            .chain(one_stream(Ok(Bytes::new())).map(move |x| {
-                log::info!("Transfer end: '{}'", path);
-                x
-            }))
-            .boxed(),
-        )
-        .unwrap();
+    let mut data_sender_res_body_sender = data_sender.res_body_sender;
+    tokio::spawn(async move {
+        data_sender_res_body_sender
+            .send_data(Bytes::from("[INFO] Start sending to 1 receiver(s)...\n"))
+            .await
+            .unwrap();
+        // Wait for sender's request body finished
+        if let Ok(_) = sender_req_body_finish_waiter.await {
+            data_sender_res_body_sender
+                .send_data(Bytes::from("[INFO] Sent successfully!\n"))
+                .await
+                .unwrap();
+        } else {
+            data_sender_res_body_sender
+                .send_data(Bytes::from(
+                    "[INFO] All receiver(s) was/were halfway disconnected.\n",
+                ))
+                .await
+                .unwrap();
+        }
+        log::info!("Transfer end: '{path}'");
+    });
     return Ok(());
 }
 

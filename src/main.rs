@@ -49,10 +49,8 @@ async fn main() -> std::io::Result<()> {
     // Set default log level
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    log::info!(
-        "Piping Server (Rust) {version}",
-        version = env!("CARGO_PKG_VERSION")
-    );
+    let version = env!("CARGO_PKG_VERSION");
+    log::info!("Piping Server (Rust) {version}");
 
     let https_server = if args.enable_https {
         if let (Some(https_port), Some(crt_path), Some(key_path)) =
@@ -65,13 +63,13 @@ async fn main() -> std::io::Result<()> {
             tcp = TcpListener::bind(&addr).await?;
             // Prepare a long-running future stream to accept and serve clients.
             let incoming_tls_stream = util::TokioIncoming::new(&mut tcp)
-                .map_err(|e| util::make_io_error(format!("Incoming failed: {:?}", e)))
+                .map_err(|e| util::make_io_error(format!("Incoming failed: {e:?}")))
                 // (base: https://github.com/cloudflare/wrangler/pull/1485/files)
                 .filter_map(|s| async {
                     let client = match s {
                         Ok(x) => x,
                         Err(e) => {
-                            log::error!("Failed to accept client: {}", e);
+                            log::error!("Failed to accept client: {e}");
                             return None;
                         }
                     };
@@ -81,7 +79,7 @@ async fn main() -> std::io::Result<()> {
                     match TlsAcceptor::from(tls_cfg).accept(client).await {
                         Ok(x) => Some(Ok::<_, std::io::Error>(x)),
                         Err(e) => {
-                            log::error!("Client connection error: {}", e);
+                            log::error!("Client connection error: {e}");
                             None
                         }
                     }
@@ -117,11 +115,11 @@ async fn main() -> std::io::Result<()> {
 
     log::info!("HTTP server is running on {}...", args.http_port);
     if let Some(https_port) = args.https_port {
-        log::info!("HTTPS server is running on {:?}...", https_port);
+        log::info!("HTTPS server is running on {https_port:?}...");
     }
     match futures::future::join(http_server, https_server).await {
-        (Err(e), _) => return Err(util::make_io_error(format!("HTTP server error: {}", e))),
-        (_, Err(e)) => return Err(util::make_io_error(format!("HTTPS server error: {}", e))),
+        (Err(e), _) => return Err(util::make_io_error(format!("HTTP server error: {e}"))),
+        (_, Err(e)) => return Err(util::make_io_error(format!("HTTPS server error: {e}"))),
         _ => (),
     }
     Ok(())

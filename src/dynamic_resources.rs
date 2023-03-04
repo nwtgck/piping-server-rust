@@ -12,6 +12,8 @@ fn escape_html_attribute(s: &str) -> String {
 }
 
 pub fn index() -> String {
+    let version = env!("CARGO_PKG_VERSION");
+    let no_script_path = &piping_server::reserved_paths::NO_SCRIPT[1..];
     return std::format!(
         // language=html
         r#"<!DOCTYPE html>
@@ -125,14 +127,13 @@ pub fn index() -> String {
 </script>
 </body>
 </html>
-"#,
-        version = env!("CARGO_PKG_VERSION"),
-        no_script_path = &piping_server::reserved_paths::NO_SCRIPT[1..],
+"#
     );
 }
 
 pub fn help(base_url: &Url) -> String {
     let version: &'static str = env!("CARGO_PKG_VERSION");
+    let url = base_url.join("mypath").unwrap();
     return std::format!(
         r#"Help for Piping Server (Rust) {version}
 (Repository: https://github.com/nwtgck/piping-server-rust)
@@ -158,9 +159,7 @@ tar zfcp - ./mydir | curl -T - {url}
 cat myfile | openssl aes-256-cbc | curl -T - {url}
 ## Get
 curl {url} | openssl aes-256-cbc -d
-"#,
-        version = version,
-        url = base_url.join("mypath").unwrap(),
+"#
     );
 }
 
@@ -207,6 +206,19 @@ pub fn no_script_html(query_params: &HashMap<String, String>, style_nonce: &str)
 
     let escaped_path = escape_html_attribute(path);
 
+    let file_mode_input_checked = if mode == file_mode { "checked" } else { "" };
+    let text_mode_input_checked = if mode == text_mode { "checked" } else { "" };
+
+    let post_action = if path.is_empty() {
+        "".to_string()
+    } else {
+        std::format!(r#"action="{escaped_path}""#, escaped_path = escaped_path)
+    };
+
+    let disabled = if path.is_empty() { "disabled" } else { "" };
+
+    let version = env!("CARGO_PKG_VERSION");
+
     return std::format!(
         // language=html
         r#"<!DOCTYPE html>
@@ -249,22 +261,6 @@ pub fn no_script_html(query_params: &HashMap<String, String>, style_nonce: &str)
   <a href=".">Top page</a><br>
 </body>
 </html>
-"#,
-        style_nonce = style_nonce,
-        path_query_param_name = path_query_param_name,
-        mode_query_param_name = mode_query_param_name,
-        file_mode = file_mode,
-        text_mode = text_mode,
-        file_mode_input_checked = if mode == file_mode { "checked" } else { "" },
-        text_mode_input_checked = if mode == text_mode { "checked" } else { "" },
-        escaped_path = escaped_path,
-        post_action = if path.is_empty() {
-            "".to_string()
-        } else {
-            std::format!(r#"action="{escaped_path}""#, escaped_path = escaped_path)
-        },
-        text_or_file_input = text_or_file_input,
-        disabled = if path.is_empty() { "disabled" } else { "" },
-        version = env!("CARGO_PKG_VERSION"),
+"#
     );
 }

@@ -192,9 +192,9 @@ pub fn hot_reload_tls_cfg(
                             *(tls_cfg_rwlock.clone().write().unwrap()) = Arc::new(tls_cfg);
                             log::info!("Successfully new certificates loaded");
                         }
-                        Err(e) => log::error!("Failed to load new certificates: {:?}", e),
+                        Err(e) => log::error!("Failed to load new certificates: {e:?}"),
                     },
-                    Err(e) => log::error!("Watch certificates error: {:?}", e),
+                    Err(e) => log::error!("Watch certificates error: {e:?}"),
                 }
             }
         }
@@ -248,31 +248,6 @@ impl futures::stream::Stream for TokioIncoming<'_> {
         let (socket, _) = ready!(self.inner.poll_accept(cx))?;
         Poll::Ready(Some(Ok(socket)))
     }
-}
-
-pin_project! {
-    pub struct One<T> {
-        value: Option<T>,
-    }
-}
-
-impl<T> One<T> {
-    fn new(x: T) -> Self {
-        One { value: Some(x) }
-    }
-}
-
-impl<T> futures::stream::Stream for One<T> {
-    type Item = T;
-
-    fn poll_next(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        Poll::Ready(self.project().value.take())
-    }
-}
-
-#[inline]
-pub fn one_stream<T>(x: T) -> One<T> {
-    One::new(x)
 }
 
 pub fn query_param_to_hash_map(query: Option<&str>) -> HashMap<String, String> {
