@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.16.0] - 2023-03-04
+### Changed
+* Update dependencies
+* (Docker) Use Rust version 1.67.1 in build
+* Notify sender when receiver disconnected in transferring
+
 ## [0.15.0] - 2022-12-10
 ### Changed
 * Update dependencies
@@ -252,7 +258,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.14.1...v0.15.0
 [0.14.1]: https://github.com/nwtgck/piping-server-rust/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.13.0...v0.14.0
