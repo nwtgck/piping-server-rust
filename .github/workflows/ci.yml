@@ -2,6 +2,9 @@ name: CI
 
 on: [push]
 
+env:
+  PIPING_SERVER_CHECK_VERSION: 0.6.0
+
 jobs:
   cargo_fmt:
     runs-on: ubuntu-20.04
@@ -157,55 +160,15 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - run: docker build -t piping-server-rust .
-    - name: Operational test with Docker image
-      run: |
-        set -eux
-        # Create certificates
-        (mkdir ssl_certs && cd ssl_certs && openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -sha256 -nodes --subj '/CN=localhost/')
-        # Run a server
-        docker run -d --name=piping -p 8181:80 -p 8443:443 -v $PWD/ssl_certs:/ssl_certs piping-server-rust --http-port=80 --enable-https --https-port=443 --crt-path=/ssl_certs/server.crt --key-path=/ssl_certs/server.key
-        # Wait for server running
-        sleep 1
-
-        # Transfer data over HTTP
-        echo "hello, world" | curl -T - localhost:8181/mypath &
-        diff <(echo "hello, world") <(curl localhost:8181/mypath)
-        # Make a large random file
-        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=/tmp/500M.dat
-        # Transfer large data over HTTP
-        cat /tmp/500M.dat | curl -T - localhost:8181/mypath &
-        diff <(cat /tmp/500M.dat) <(curl localhost:8181/mypath)
-        rm /tmp/500M.dat
-
-        # Transfer data over HTTPS
-        echo "hello, world with HTTPS" | curl -kT - https://localhost:8443/mypath2 &
-        diff <(echo "hello, world with HTTPS") <(curl -k https://localhost:8443/mypath2)
-        # Make a large random file
-        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=/tmp/500M.dat
-        # Transfer large data over HTTPS
-        cat /tmp/500M.dat | curl -kT - https://localhost:8443/mypath2 &
-        diff <(cat /tmp/500M.dat) <(curl -k https://localhost:8443/mypath2)
-        rm /tmp/500M.dat
-
-        # HTTP/2 support
-        (echo hello | curl -ksST- https://localhost:8443/mypath3 -o /dev/null -w '%{http_version}:%{http_code}\n' > /tmp/http2_post.txt) &
-        post_pid=$!
-        diff <(echo '2:200') <(curl -ksS https://localhost:8443/mypath3 -o /dev/null -w '%{http_version}:%{http_code}\n')
-        wait $post_pid
-        diff <(echo '2:200') /tmp/http2_post.txt
-
-        # Transfer data using multipart
-        # Make a large random file
-        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=/tmp/500M.dat
-        # Transfer large data over HTTP
-        curl -F myfile=@/tmp/500M.dat localhost:8181/mypath3 &
-        diff <(cat /tmp/500M.dat) <(curl localhost:8181/mypath3)
-        rm /tmp/500M.dat
-
-        # Print server log
-        docker logs piping
-        # Delete container
-        docker rm -f piping
+    - name: Create certificates
+      run: cd /tmp && mkdir ssl_certs && cd ssl_certs && openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -sha256 -nodes --subj '/CN=localhost/'
+    - name: Install piping-server-check
+      run: cd /tmp && wget -O piping-server-check.deb https://github.com/nwtgck/piping-server-check/releases/download/v${PIPING_SERVER_CHECK_VERSION}/piping-server-check-${PIPING_SERVER_CHECK_VERSION}-linux-amd64.deb && sudo dpkg -i piping-server-check.deb
+    - name: piping-server-check
+      run: piping-server-check --http1.1 --http1.1-tls --h2 --tls-skip-verify --concurrency 100 --server-command='mkdir -p /tmp/logs && exec docker run -p $HTTP_PORT:8080 -p $HTTPS_PORT:8443 -v /tmp/ssl_certs:/tmp/ssl_certs piping-server-rust --http-port=8080 --enable-https --https-port=8443 --crt-path=/tmp/ssl_certs/server.crt --key-path=/tmp/ssl_certs/server.key 2>&1 | tee /tmp/logs/$(date "+%s%3N").log > /dev/stderr' --transfer-speed-byte $((1024 * 1024 * 1024 * 1024)) --transfer-span 3s --transfer-span 10s --transfer-span 1m --transfer-span 2m --transfer-span 3m --transfer-span 4m
+      timeout-minutes: 5
+    - name: Show server logs from piping-server-check
+      run: cat /tmp/logs/*
     - name: Push if branch is develop
       if: github.ref == 'refs/heads/develop'
       run: |
