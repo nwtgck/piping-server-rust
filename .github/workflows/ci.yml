@@ -3,7 +3,7 @@ name: CI
 on: [push]
 
 env:
-  PIPING_SERVER_CHECK_VERSION: 0.6.0
+  PIPING_SERVER_CHECK_VERSION: 0.7.0
 
 jobs:
   cargo_fmt:
