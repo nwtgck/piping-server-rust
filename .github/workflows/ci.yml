@@ -165,7 +165,7 @@ jobs:
     - name: Install piping-server-check
       run: cd /tmp && wget -O piping-server-check.deb https://github.com/nwtgck/piping-server-check/releases/download/v${PIPING_SERVER_CHECK_VERSION}/piping-server-check-${PIPING_SERVER_CHECK_VERSION}-linux-amd64.deb && sudo dpkg -i piping-server-check.deb
     - name: piping-server-check
-      run: piping-server-check --http1.1 --http1.1-tls --h2 --tls-skip-verify --concurrency 100 --server-command='mkdir -p /tmp/logs && exec docker run -p $HTTP_PORT:8080 -p $HTTPS_PORT:8443 -v /tmp/ssl_certs:/tmp/ssl_certs piping-server-rust --http-port=8080 --enable-https --https-port=8443 --crt-path=/tmp/ssl_certs/server.crt --key-path=/tmp/ssl_certs/server.key 2>&1 | tee /tmp/logs/$(date "+%s%3N").log > /dev/stderr' --transfer-speed-byte $((1024 * 1024 * 1024 * 1024)) --transfer-span 3s --transfer-span 10s --transfer-span 1m --transfer-span 2m --transfer-span 3m --transfer-span 4m
+      run: piping-server-check --http1.1 --http1.1-tls --h2 --tls-skip-verify --concurrency 100 --server-command='mkdir -p /tmp/logs && exec docker run -p $HTTP_PORT:8080 -p $HTTPS_PORT:8443 -v /tmp/ssl_certs:/tmp/ssl_certs piping-server-rust --http-port=8080 --enable-https --https-port=8443 --crt-path=/tmp/ssl_certs/server.crt --key-path=/tmp/ssl_certs/server.key 2>&1 | tee /tmp/logs/$(date "+%s%3N").log > /dev/stderr' --transfer-speed-byte $((8 * 1024 * 1024)) --transfer-span 3s --transfer-span 10s --transfer-span 1m --transfer-span 2m --transfer-span 3m --transfer-span 4m
       timeout-minutes: 5
     - name: Show server logs from piping-server-check
       run: cat /tmp/logs/*
