@@ -1,4 +1,4 @@
-# piping-server
+# piping-server 
 [![CI](https://github.com/nwtgck/piping-server-rust/workflows/CI/badge.svg)](https://github.com/nwtgck/piping-server-rust/actions) [![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/nwtgck/piping-server-rust)](https://hub.docker.com/r/nwtgck/piping-server-rust)
 
 [Piping Server](https://github.com/nwtgck/piping-server) written in Rust
