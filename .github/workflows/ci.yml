@@ -58,7 +58,7 @@ jobs:
       - run: |
           rustc --version
           cargo --version
-      - run: rustup toolchain install 1.67.0
+      - run: rustup default 1.67.0
       - run: |
           rustc --version
           cargo --version
