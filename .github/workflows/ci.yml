@@ -39,26 +39,29 @@ jobs:
       max-parallel: 8
       matrix:
         target:
-          - aarch64-unknown-linux-musl
-          - arm-linux-androideabi
-          - arm-unknown-linux-musleabi
-          - arm-unknown-linux-musleabihf
-          - armv5te-unknown-linux-musleabi
-          - armv7-linux-androideabi
-          - armv7-unknown-linux-musleabihf
-          - armv7-unknown-linux-musleabi
-          - i586-unknown-linux-musl
-          - i686-linux-android
-          - i686-unknown-linux-musl
-          - x86_64-linux-android
-          - x86_64-pc-windows-gnu
+#          - aarch64-unknown-linux-musl
+#          - arm-linux-androideabi
+#          - arm-unknown-linux-musleabi
+#          - arm-unknown-linux-musleabihf
+#          - armv5te-unknown-linux-musleabi
+#          - armv7-linux-androideabi
+#          - armv7-unknown-linux-musleabihf
+#          - armv7-unknown-linux-musleabi
+#          - i586-unknown-linux-musl
+#          - i686-linux-android
+#          - i686-unknown-linux-musl
+#          - x86_64-linux-android
+#          - x86_64-pc-windows-gnu
           - x86_64-unknown-linux-musl
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.67.0
-          override: true
+      - run: |
+          rustc --version
+          cargo --version
+      - run: rustup toolchain install 1.67.0
+      - run: |
+          rustc --version
+          cargo --version
       - uses: actions/checkout@v3
       - name: Install cross
         run: cd /tmp && curl -L https://github.com/cross-rs/cross/releases/download/v0.2.5/cross-x86_64-unknown-linux-musl.tar.gz | tar xzf -
