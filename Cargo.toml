@@ -10,10 +10,10 @@ futures = { version = "0.3", default-features = false, features = ["std"] }
 clap = { version = "4.0.32", features = ["derive"] }
 http = "0.2"
 tokio = { version = "1.27", features = ["rt-multi-thread", "macros", "net"] }
-rustls = "0.20"
+rustls = "0.21"
 rustls-pemfile = "1.0"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
-tokio-rustls = "0.23"
+tokio-rustls = "0.24"
 log = "0.4"
 env_logger = "0.10"
 pin-project-lite = "0.2"
