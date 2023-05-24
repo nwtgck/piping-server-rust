@@ -1,6 +1,6 @@
 # NOTE: Multi-stage Build
 
-FROM nwtgck/rust-musl-builder:1.68.2 as build
+FROM nwtgck/rust-musl-builder:1.69.0 as build
 
 # Install tini
 ENV TINI_VERSION v0.19.0
