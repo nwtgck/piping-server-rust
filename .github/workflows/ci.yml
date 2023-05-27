@@ -3,6 +3,8 @@ name: CI
 on: [push]
 
 env:
+  CROSS_VERSION: 0.2.5
+  RUST_VERSION: 1.67.0
   PIPING_SERVER_CHECK_VERSION: 0.8.1
 
 jobs:
@@ -52,10 +54,10 @@ jobs:
           - x86_64-unknown-linux-musl
     runs-on: ubuntu-20.04
     steps:
-      - run: rustup default 1.67.0
+      - run: rustup default ${RUST_VERSION}
       - uses: actions/checkout@v3
       - name: Install cross
-        run: cd /tmp && curl -L https://github.com/cross-rs/cross/releases/download/v0.2.5/cross-x86_64-unknown-linux-musl.tar.gz | tar xzf -
+        run: cd /tmp && curl -L https://github.com/cross-rs/cross/releases/download/v${CROSS_VERSION}/cross-x86_64-unknown-linux-musl.tar.gz | tar xzf -
       - run: /tmp/cross build --target=${{ matrix.target }} --release --locked
       - name: Archive binary
         run: |
@@ -138,7 +140,7 @@ jobs:
           - aarch64-apple-darwin
     runs-on: macOS-11
     steps:
-    - run: rustup default 1.67.0
+    - run: rustup default ${RUST_VERSION}
     - uses: actions/checkout@v3
     - run: rustup target add ${{ matrix.target }}
     - run: cargo build --target=${{ matrix.target }} --release --locked
