@@ -170,11 +170,14 @@ jobs:
       timeout-minutes: 5
     - name: Show server logs from piping-server-check
       run: cat /tmp/logs/*
+    - uses: docker/login-action@v2
+      with:
+        username: nwtgck
+        password: ${{ secrets.DOCKER_HUB_TOKEN }}
     - name: Push if branch is develop
       if: github.ref == 'refs/heads/develop'
       run: |
         set -eu
-        echo ${{ secrets.DOCKER_HUB_TOKEN }} | docker login -u nwtgck --password-stdin
         GIT_BRANCH=${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}
         docker tag piping-server-rust nwtgck/piping-server-rust:${GIT_BRANCH}
         docker push nwtgck/piping-server-rust:${GIT_BRANCH}
