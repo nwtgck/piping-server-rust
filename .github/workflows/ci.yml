@@ -170,7 +170,7 @@ jobs:
       timeout-minutes: 5
     - name: Show server logs from piping-server-check
       run: cat /tmp/logs/*
-    - uses: docker/login-action@v2
+    - uses: docker/login-action@v3
       with:
         username: nwtgck
         password: ${{ secrets.DOCKER_HUB_TOKEN }}
