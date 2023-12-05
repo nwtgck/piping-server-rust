@@ -13,7 +13,7 @@ tokio = { version = "1.29", features = ["rt-multi-thread", "macros", "net"] }
 rustls = "0.21"
 rustls-pemfile = "1.0"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
-tokio-rustls = "0.24"
+tokio-rustls = "0.25"
 log = "0.4"
 env_logger = "0.10"
 pin-project-lite = "0.2"
