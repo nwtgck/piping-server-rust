@@ -7,7 +7,6 @@ use specit::tokio_it as it;
 use std::convert::Infallible;
 
 use piping_server::piping_server::PipingServer;
-use piping_server::req_res_handler::req_res_handler;
 use std::net::SocketAddr;
 use std::time;
 
@@ -52,10 +51,9 @@ async fn serve() -> Serve {
     tokio::spawn(async move {
         let http_svc = make_service_fn(|_| {
             let piping_server = piping_server.clone();
-            let handler = req_res_handler(move |req, res_sender| {
-                piping_server.handler(false, req, res_sender)
-            });
-            futures::future::ok::<_, Infallible>(service_fn(handler))
+            futures::future::ok::<_, Infallible>(service_fn(move |req| {
+                piping_server.handler(false, req)
+            }))
         });
         let http_server = Server::bind(&([127, 0, 0, 1], 0).into()).serve(http_svc);
         addr_tx

@@ -62,8 +62,9 @@ impl PipingServer {
         &self,
         uses_https: bool,
         req: Request<Body>,
-        res_sender: oneshot::Sender<Response<Body>>,
-    ) -> impl std::future::Future<Output = ()> {
+    ) -> impl std::future::Future<Output = Result<Response<Body>, oneshot::Canceled>> /* TODO: use better Error instead of oneshot::Canceled */
+    {
+        let (res_sender, res_receiver) = oneshot::channel::<Response<Body>>();
         let path_to_sender = Arc::clone(&self.path_to_sender);
         let path_to_receiver = Arc::clone(&self.path_to_receiver);
         async move {
@@ -81,7 +82,7 @@ impl PipingServer {
                             .body(Body::from(dynamic_resources::index()))
                             .unwrap();
                         res_sender.send(res).unwrap();
-                        return;
+                        return res_receiver.await;
                     }
                     reserved_paths::NO_SCRIPT => {
                         let query_params = query_param_to_hash_map(req.uri().query());
@@ -102,7 +103,7 @@ impl PipingServer {
                             .body(Body::from(html))
                             .unwrap();
                         res_sender.send(res).unwrap();
-                        return;
+                        return res_receiver.await;
                     }
                     reserved_paths::VERSION => {
                         let version: &'static str = env!("CARGO_PKG_VERSION");
@@ -113,7 +114,7 @@ impl PipingServer {
                             .body(Body::from(format!("{version} (Rust)\n")))
                             .unwrap();
                         res_sender.send(res).unwrap();
-                        return;
+                        return res_receiver.await;
                     }
                     reserved_paths::HELP => {
                         let host: &str = req
@@ -142,12 +143,12 @@ impl PipingServer {
                             .body(Body::from(help))
                             .unwrap();
                         res_sender.send(res).unwrap();
-                        return;
+                        return res_receiver.await;
                     }
                     reserved_paths::FAVICON_ICO => {
                         let res = Response::builder().status(204).body(Body::empty()).unwrap();
                         res_sender.send(res).unwrap();
-                        return;
+                        return res_receiver.await;
                     }
                     reserved_paths::ROBOTS_TXT => {
                         let res = Response::builder()
@@ -157,7 +158,7 @@ impl PipingServer {
                             .body(Body::empty())
                             .unwrap();
                         res_sender.send(res).unwrap();
-                        return;
+                        return res_receiver.await;
                     }
                     _ => {}
                 }
@@ -173,7 +174,7 @@ impl PipingServer {
                                     "[ERROR] Service Worker registration is rejected.\n",
                                 )))
                                 .unwrap();
-                            return;
+                            return res_receiver.await;
                         }
                     }
                     let query_params = query_param_to_hash_map(req.uri().query());
@@ -184,7 +185,7 @@ impl PipingServer {
                                 "[ERROR] Invalid \"n\" query parameter\n",
                             )))
                             .unwrap();
-                        return;
+                        return res_receiver.await;
                     }
                     let n_receivers = n_receivers_result.unwrap();
                     if n_receivers <= 0 {
@@ -193,7 +194,7 @@ impl PipingServer {
                                 "[ERROR] n should > 0, but n = {n_receivers}.\n"
                             ))))
                             .unwrap();
-                        return;
+                        return res_receiver.await;
                     }
                     if n_receivers > 1 {
                         res_sender
@@ -201,7 +202,7 @@ impl PipingServer {
                                 "[ERROR] n > 1 not supported yet.\n",
                             )))
                             .unwrap();
-                        return;
+                        return res_receiver.await;
                     }
                     let receiver_connected: bool = path_to_receiver.contains_key(path);
                     // If a receiver has been connected already
@@ -211,7 +212,7 @@ impl PipingServer {
                                 "[ERROR] Another receiver has been connected on '{path}'.\n",
                             ))))
                             .unwrap();
-                        return;
+                        return res_receiver.await;
                     }
                     let sender = path_to_sender.remove(path);
                     match sender {
@@ -236,7 +237,7 @@ impl PipingServer {
                     if reserved_paths::VALUES.contains(&path) {
                         // Reject reserved path sending
                         res_sender.send(rejection_response(Body::from(format!("[ERROR] Cannot send to the reserved path '{path}'. (e.g. '/mypath123')\n")))).unwrap();
-                        return;
+                        return res_receiver.await;
                     }
                     // Notify that Content-Range is not supported
                     // In the future, resumable upload using Content-Range might be supported
@@ -249,7 +250,7 @@ impl PipingServer {
                                 req.method()
                             ))))
                             .unwrap();
-                        return;
+                        return res_receiver.await;
                     }
                     let query_params = query_param_to_hash_map(req.uri().query());
                     let n_receivers_result: Result<u32, _> = get_n_receivers_result(&query_params);
@@ -259,7 +260,7 @@ impl PipingServer {
                                 "[ERROR] Invalid \"n\" query parameter\n",
                             )))
                             .unwrap();
-                        return;
+                        return res_receiver.await;
                     }
                     let n_receivers = n_receivers_result.unwrap();
                     if n_receivers <= 0 {
@@ -268,7 +269,7 @@ impl PipingServer {
                                 "[ERROR] n should > 0, but n = {n_receivers}.\n"
                             ))))
                             .unwrap();
-                        return;
+                        return res_receiver.await;
                     }
                     if n_receivers > 1 {
                         res_sender
@@ -276,7 +277,7 @@ impl PipingServer {
                                 "[ERROR] n > 1 not supported yet.\n",
                             )))
                             .unwrap();
-                        return;
+                        return res_receiver.await;
                     }
                     let sender_connected: bool = path_to_sender.contains_key(path);
                     // If a sender has been connected already
@@ -286,7 +287,7 @@ impl PipingServer {
                                 "[ERROR] Another sender has been connected on '{path}'.\n",
                             ))))
                             .unwrap();
-                        return;
+                        return res_receiver.await;
                     }
 
                     let (mut res_body_sender, body) = Body::channel();
@@ -381,7 +382,8 @@ impl PipingServer {
                         .unwrap();
                     res_sender.send(res).unwrap();
                 }
-            }
+            };
+            return res_receiver.await;
         }
     }
 }
