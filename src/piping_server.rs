@@ -62,7 +62,7 @@ impl PipingServer {
         &self,
         uses_https: bool,
         req: Request<Body>,
-    ) -> impl std::future::Future<Output = Result<Response<Body>, oneshot::Canceled>> /* TODO: use better Error instead of oneshot::Canceled */
+    ) -> impl std::future::Future<Output = Result<Response<Body>, oneshot::Canceled>> + Send /* TODO: use better Error instead of oneshot::Canceled */
     {
         let path_to_sender = Arc::clone(&self.path_to_sender);
         let path_to_receiver = Arc::clone(&self.path_to_receiver);
