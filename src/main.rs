@@ -8,7 +8,6 @@ use tokio::net::TcpListener;
 use tokio_rustls::TlsAcceptor;
 
 use piping_server::piping_server::PipingServer;
-use piping_server::req_res_handler::req_res_handler;
 use piping_server::util;
 
 /// Piping Server in Rust
@@ -86,10 +85,9 @@ async fn main() -> std::io::Result<()> {
                 });
             let https_svc = make_service_fn(move |_| {
                 let piping_server = piping_server.clone();
-                let handler = req_res_handler(move |req, res_sender| {
-                    piping_server.handler(true, req, res_sender)
-                });
-                futures::future::ok::<_, Infallible>(service_fn(handler))
+                futures::future::ok::<_, Infallible>(service_fn(move |req| {
+                    piping_server.handler(true, req)
+                }))
             });
             let https_server = Server::builder(util::HyperAcceptor {
                 acceptor: incoming_tls_stream,
@@ -107,9 +105,9 @@ async fn main() -> std::io::Result<()> {
 
     let http_svc = make_service_fn(|_| {
         let piping_server = piping_server.clone();
-        let handler =
-            req_res_handler(move |req, res_sender| piping_server.handler(false, req, res_sender));
-        futures::future::ok::<_, Infallible>(service_fn(handler))
+        futures::future::ok::<_, Infallible>(service_fn(move |req| {
+            piping_server.handler(false, req)
+        }))
     });
     let http_server = Server::bind(&(args.host, args.http_port).into()).serve(http_svc);
 
