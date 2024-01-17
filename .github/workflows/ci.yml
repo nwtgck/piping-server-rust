@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v4
-    - run: rustup default 1.60.0
+    - run: rustup default 1.63.0
     - run: cargo test -- --color=always --nocapture
 
   cross_build:
