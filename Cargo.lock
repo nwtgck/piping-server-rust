@@ -499,6 +499,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
+ "socket2 0.4.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -537,7 +538,7 @@ dependencies = [
  "http-body 1.0.0",
  "hyper 1.1.0",
  "pin-project-lite",
- "socket2",
+ "socket2 0.5.5",
  "tokio",
  "tracing",
 ]
@@ -1087,6 +1088,16 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 
 [[package]]
 name = "socket2"
+version = "0.4.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f7916fc008ca5542385b89a3d3ce689953c143e9304a9bf8beec1de48994c0d"
+dependencies = [
+ "libc",
+ "winapi",
+]
+
+[[package]]
+name = "socket2"
 version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b5fac59a5cb5dd637972e5fca70daf0523c9067fcdc4842f053dae04a18f8e9"
@@ -1202,7 +1213,7 @@ dependencies = [
  "mio",
  "num_cpus",
  "pin-project-lite",
- "socket2",
+ "socket2 0.5.5",
  "tokio-macros",
  "windows-sys 0.48.0",
 ]

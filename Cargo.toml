@@ -33,5 +33,6 @@ seq-macro = "0.3"
 
 [dev-dependencies]
 specit = {version  = "0.4.0", features = ["tokio"] }
-hyper = { version = "0.14", features = [ "client" ] }
+# TODO: use hyper 1 in tests
+hyper_0_14 = { package = "hyper", version = "0.14", features = [ "client", "stream", "tcp", "http1" ] }
 regex = "1.9"
