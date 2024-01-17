@@ -5,28 +5,34 @@ authors = ["Ryo Ota <nwtgck@nwtgck.org>"]
 edition = "2018"
 
 [dependencies]
-hyper = { version = "0.14", features = ["stream", "server", "http1", "http2", "tcp"] }
-futures = { version = "0.3", default-features = false, features = ["std"] }
 clap = { version = "4.0.32", features = ["derive"] }
-http = "0.2"
-tokio = { version = "1.29", features = ["rt-multi-thread", "macros", "net"] }
-rustls = "0.21"
-rustls-pemfile = "1.0"
-futures-util = { version = "0.3", default-features = false, features = ["std"] }
-tokio-rustls = "0.24"
+anyhow = "1.0"
 log = "0.4"
 env_logger = "0.10"
-pin-project-lite = "0.2"
-mime = "0.3"
-mpart-async = { version = "0.6", default-features = false }
-serde_urlencoded = "0.7"
-url = { version = "2.5", default-features = false }
-notify = "5.1.0"
+futures = { version = "0.3", features = ["std"] }
+tokio = { version = "1.35", features = ["rt-multi-thread", "macros", "net"] }
+hyper = { version = "1.1", default-features = false, features = ["server", "http1", "http2"] }
+hyper-util = { version = "0.1", default-features = false, features = ["server-auto", "tokio"] }
+http = "1.0"
+http-body = "1.0"
+http-body-util = "0.1"
+rustls = "0.22"
+rustls-pemfile = "2.0"
+tokio-rustls = "0.25"
 getrandom = { version = "0.2", default-features = false }
 base64 = "0.21"
+url = { version = "2.5", default-features = false }
+mime = "0.3"
+mpart-async = { git = "https://github.com/nwtgck/mpart-async.git", rev = "971bb4ebf8d95e5fda427dd968e7a5139d0c742b", default-features = false }
+notify = "6.1"
 dashmap = "5.3"
+serde_urlencoded = "0.7"
+pin-project-lite = "0.2"
+auto_enums = { version = "0.8", default-features = false, features = ["http_body1"] }
+seq-macro = "0.3"
 
 [dev-dependencies]
 specit = {version  = "0.4.0", features = ["tokio"] }
-hyper = { version = "0.14", features = [ "client" ] }
+# TODO: use hyper 1 in tests
+hyper_0_14 = { package = "hyper", version = "0.14", features = [ "client", "stream", "tcp", "http1" ] }
 regex = "1.9"
