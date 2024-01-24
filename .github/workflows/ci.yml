@@ -131,6 +131,7 @@ jobs:
         curl -F myfile=@/tmp/500M.dat localhost:8181/mypath3 &
         diff <(cat /tmp/500M.dat) <(curl localhost:8181/mypath3)
         rm /tmp/500M.dat
+      timeout-minutes: 1
 
   build_for_mac:
     strategy:
