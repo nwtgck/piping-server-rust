@@ -23,7 +23,7 @@ getrandom = { version = "0.2", default-features = false }
 base64 = "0.21"
 url = { version = "2.5", default-features = false }
 mime = "0.3"
-mpart-async = { git = "https://github.com/nwtgck/mpart-async.git", rev = "971bb4ebf8d95e5fda427dd968e7a5139d0c742b", default-features = false }
+mpart-async = { version = "0.7", default-features = false }
 notify = "6.1"
 dashmap = "5.3"
 serde_urlencoded = "0.7"
