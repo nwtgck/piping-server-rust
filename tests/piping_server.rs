@@ -52,20 +52,18 @@ struct Serve {
 async fn serve() -> Serve {
     let piping_server = PipingServer::new();
 
-    let (addr_tx, addr_rx) = oneshot::channel::<SocketAddr>();
     let (shutdown_tx, mut shutdown_rx) = oneshot::channel::<()>();
     let (shutdown_finished_tx, shutdown_finished_rx) = oneshot::channel::<()>();
+
+    let tcp_listener = tokio::net::TcpListener::bind::<(_, u16)>(("127.0.0.1", 0).into())
+        .await
+        .unwrap();
+    let addr = tcp_listener.local_addr().unwrap();
 
     tokio::spawn(async move {
         let piping_server = piping_server.clone();
         let piping_server_service =
             hyper::service::service_fn(move |req| piping_server.clone().handle(false, req));
-        let tcp_listener = tokio::net::TcpListener::bind::<(_, u16)>(("127.0.0.1", 0).into())
-            .await
-            .unwrap();
-        addr_tx
-            .send(tcp_listener.local_addr().unwrap())
-            .expect("server address send failed");
 
         loop {
             let accept_fut = tcp_listener.accept().fuse();
@@ -86,8 +84,6 @@ async fn serve() -> Serve {
         }
         shutdown_finished_tx.send(()).unwrap();
     });
-
-    let addr = addr_rx.await.expect("failed to get addr");
 
     Serve {
         addr,
