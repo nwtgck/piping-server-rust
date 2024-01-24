@@ -8,8 +8,6 @@ use piping_server::piping_server::PipingServer;
 use std::net::SocketAddr;
 use std::time;
 
-type BoxError = Box<dyn std::error::Error + Send + Sync>;
-
 fn get_header_value<'a>(
     headers: &'a hyper::header::HeaderMap,
     key: &'static str,
@@ -99,7 +97,7 @@ async fn serve() -> Serve {
 }
 
 impl Serve {
-    async fn shutdown(self) -> Result<(), BoxError> {
+    async fn shutdown(self) -> anyhow::Result<()> {
         self.shutdown_tx
             .send(())
             .expect("failed to shutdown in client-side");
@@ -132,7 +130,7 @@ where
 }
 
 #[it("should return index page")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     let uri = format!("http://{}", serve.addr).parse::<http::Uri>()?;
@@ -164,7 +162,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should return noscript page")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     let res = http_request(
@@ -201,7 +199,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should return version page")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     let uri = format!("http://{}/version", serve.addr).parse::<http::Uri>()?;
@@ -234,7 +232,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should return help page")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     let uri = format!("http://{}/help", serve.addr).parse::<http::Uri>()?;
@@ -261,7 +259,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should handle /favicon.ico")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     let uri = format!("http://{}/favicon.ico", serve.addr).parse::<http::Uri>()?;
@@ -286,7 +284,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should handle /robots.txt")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     let uri = format!("http://{}/robots.txt", serve.addr).parse::<http::Uri>()?;
@@ -310,7 +308,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should not allow user to send the reserved paths")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     for reserved_path in piping_server::piping_server::reserved_paths::VALUES {
@@ -335,7 +333,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should return a HEAD response with the same headers as GET response in the reserved paths")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     fn normalize_headers(headers: &mut http::header::HeaderMap<http::header::HeaderValue>) {
@@ -371,7 +369,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should support preflight request")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
@@ -416,7 +414,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should support Private Network Access preflight request")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
@@ -460,7 +458,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should reject Service Worker registration request")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     let uri = format!("http://{}/mysw.js", serve.addr).parse::<http::Uri>()?;
@@ -489,7 +487,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should reject POST and PUT with Content-Range")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
@@ -519,7 +517,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should handle connection (sender: O, receiver: O)")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
@@ -583,7 +581,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should handle connection (receiver: O, sender: O)")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
@@ -596,7 +594,7 @@ async fn f() -> Result<(), BoxError> {
                 .uri(uri)
                 .body(empty_body())?;
             let get_res = http_request(get_req).await?;
-            Ok::<_, BoxError>(get_res)
+            Ok::<_, anyhow::Error>(get_res)
         }
     });
     tokio::time::sleep(time::Duration::from_millis(100)).await;
@@ -654,7 +652,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should reject a sender connecting a path another sender connected already")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
@@ -706,7 +704,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should reject a receiver connecting a path another receiver connected already")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
@@ -719,7 +717,7 @@ async fn f() -> Result<(), BoxError> {
     let first_get_res_parts_join_handle = tokio::spawn(async {
         let get_res = http_request(get_req).await?;
         let (get_res_parts, _get_res_body) = get_res.into_parts();
-        Ok::<_, BoxError>(get_res_parts)
+        Ok::<_, anyhow::Error>(get_res_parts)
     });
     tokio::time::sleep(time::Duration::from_millis(500)).await;
 
@@ -769,7 +767,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should reject invalid n")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     {
@@ -817,7 +815,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should reject n = 0")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     {
@@ -865,7 +863,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should reject n > 1 because not supported yet")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     {
@@ -913,7 +911,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should pass X-Piping and attach Access-Control-Expose-Headers: X-Piping when sending with X-Piping")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
@@ -975,7 +973,7 @@ async fn f() -> Result<(), BoxError> {
 }
 
 #[it("should pass multiple X-Piping")]
-async fn f() -> Result<(), BoxError> {
+async fn f() -> anyhow::Result<()> {
     let serve: Serve = serve().await;
 
     let uri = format!("http://{}/mypath", serve.addr).parse::<http::Uri>()?;
