@@ -8,7 +8,7 @@ use url::Url;
 
 use crate::dynamic_resources;
 use crate::util::{
-    finish_detectable_body, full_body, query_param_to_hash_map, FinishDetectableBody,
+    empty_body, finish_detectable_body, full_body, query_param_to_hash_map, FinishDetectableBody,
     HeaderValuesBuilder, OptionHeaderBuilder,
 };
 
@@ -98,10 +98,11 @@ impl PipingServer {
         seq_macro::seq!(N in 1..=2 {
             #[derive(Debug)]
             #[auto_enums::enum_derive(http_body1::Body)]
-            enum BodyEnum<D, E, Full, #(B~N,)*> {
+            enum BodyEnum<D, E, Full, Empty, #(B~N,)*> {
                 #[allow(dead_code)]
                 BoxBody(http_body_util::combinators::BoxBody<D, E>),
                 FullBody(Full),
+                EmptyBody(Empty),
                 #(Body~N(B~N),)*
             }
         });
@@ -123,9 +124,7 @@ impl PipingServer {
                         .status(200)
                         .header("Content-Type", "text/html")
                         .header("Access-Control-Allow-Origin", "*")
-                        .body(BodyEnum::FullBody(full_body(Bytes::from(
-                            dynamic_resources::index(),
-                        ))))
+                        .body(BodyEnum::FullBody(full_body(dynamic_resources::index())))
                         .unwrap());
                 }
                 reserved_paths::NO_SCRIPT => {
@@ -145,7 +144,7 @@ impl PipingServer {
                             "Content-Security-Policy",
                             format!("default-src 'none'; style-src 'nonce-{style_nonce}'"),
                         )
-                        .body(BodyEnum::FullBody(full_body(Bytes::from(html))))
+                        .body(BodyEnum::FullBody(full_body(html)))
                         .unwrap());
                 }
                 reserved_paths::VERSION => {
@@ -154,9 +153,7 @@ impl PipingServer {
                         .status(200)
                         .header("Content-Type", "text/plain")
                         .header("Access-Control-Allow-Origin", "*")
-                        .body(BodyEnum::FullBody(full_body(Bytes::from(format!(
-                            "{version} (Rust)\n"
-                        )))))
+                        .body(BodyEnum::FullBody(full_body(format!("{version} (Rust)\n"))))
                         .unwrap());
                 }
                 reserved_paths::HELP => {
@@ -183,13 +180,13 @@ impl PipingServer {
                         .status(200)
                         .header("Content-Type", "text/plain")
                         .header("Access-Control-Allow-Origin", "*")
-                        .body(BodyEnum::FullBody(full_body(Bytes::from(help))))
+                        .body(BodyEnum::FullBody(full_body(help)))
                         .unwrap());
                 }
                 reserved_paths::FAVICON_ICO => {
                     return Ok(http::Response::builder()
                         .status(204)
-                        .body(BodyEnum::FullBody(full_body(Bytes::new())))
+                        .body(BodyEnum::EmptyBody(empty_body()))
                         .unwrap());
                 }
                 reserved_paths::ROBOTS_TXT => {
@@ -197,7 +194,7 @@ impl PipingServer {
                         .status(404)
                         // explicit `content-length: 0`: https://github.com/hyperium/hyper/pull/2836
                         .header("Content-Length", 0)
-                        .body(BodyEnum::FullBody(full_body(Bytes::new())))
+                        .body(BodyEnum::EmptyBody(empty_body()))
                         .unwrap());
                 }
                 _ => {}
@@ -210,7 +207,7 @@ impl PipingServer {
                     if value == http::HeaderValue::from_static("script") {
                         // Reject Service Worker registration
                         return Ok(rejection_response(BodyEnum::FullBody(full_body(
-                            Bytes::from("[ERROR] Service Worker registration is rejected.\n"),
+                            "[ERROR] Service Worker registration is rejected.\n",
                         ))));
                     }
                 }
@@ -218,28 +215,26 @@ impl PipingServer {
                 let n_receivers_result: Result<u32, _> = get_n_receivers_result(&query_params);
                 if let Err(_) = n_receivers_result {
                     return Ok(rejection_response(BodyEnum::FullBody(full_body(
-                        Bytes::from("[ERROR] Invalid \"n\" query parameter\n"),
+                        "[ERROR] Invalid \"n\" query parameter\n",
                     ))));
                 }
                 let n_receivers = n_receivers_result.unwrap();
                 if n_receivers <= 0 {
-                    return Ok(rejection_response(BodyEnum::FullBody(full_body(
-                        Bytes::from(format!("[ERROR] n should > 0, but n = {n_receivers}.\n")),
-                    ))));
+                    return Ok(rejection_response(BodyEnum::FullBody(full_body(format!(
+                        "[ERROR] n should > 0, but n = {n_receivers}.\n"
+                    )))));
                 }
                 if n_receivers > 1 {
                     return Ok(rejection_response(BodyEnum::FullBody(full_body(
-                        Bytes::from("[ERROR] n > 1 not supported yet.\n"),
+                        "[ERROR] n > 1 not supported yet.\n",
                     ))));
                 }
                 let receiver_connected: bool = self.path_to_receiver.contains_key(path);
                 // If a receiver has been connected already
                 if receiver_connected {
-                    return Ok(rejection_response(BodyEnum::FullBody(full_body(
-                        Bytes::from(format!(
-                            "[ERROR] Another receiver has been connected on '{path}'.\n",
-                        )),
-                    ))));
+                    return Ok(rejection_response(BodyEnum::FullBody(full_body(format!(
+                        "[ERROR] Another receiver has been connected on '{path}'.\n",
+                    )))));
                 }
                 let (res_sender, res_receiver) = futures::channel::oneshot::channel::<
                     http::Response<DataReceiverResponseBody>,
@@ -297,20 +292,20 @@ impl PipingServer {
                 }
                 let n_receivers = n_receivers_result.unwrap();
                 if n_receivers <= 0 {
-                    return Ok(rejection_response(BodyEnum::FullBody(full_body(
-                        Bytes::from(format!("[ERROR] n should > 0, but n = {n_receivers}.\n")),
-                    ))));
+                    return Ok(rejection_response(BodyEnum::FullBody(full_body(format!(
+                        "[ERROR] n should > 0, but n = {n_receivers}.\n"
+                    )))));
                 }
                 if n_receivers > 1 {
                     return Ok(rejection_response(BodyEnum::FullBody(full_body(
-                        Bytes::from("[ERROR] n > 1 not supported yet.\n"),
+                        "[ERROR] n > 1 not supported yet.\n",
                     ))));
                 }
                 let sender_connected: bool = self.path_to_sender.contains_key(path);
                 // If a sender has been connected already
                 if sender_connected {
                     return Ok(rejection_response(BodyEnum::FullBody(full_body(
-                        Bytes::from("[ERROR] Another sender has been connected on '{path}'.\n"),
+                        "[ERROR] Another sender has been connected on '{path}'.\n",
                     ))));
                 }
 
@@ -400,7 +395,7 @@ impl PipingServer {
                     )
                     .header("Access-Control-Max-Age", 86400)
                     .header("Content-Length", 0)
-                    .body(BodyEnum::FullBody(full_body(Bytes::new())))
+                    .body(BodyEnum::EmptyBody(empty_body()))
                     .unwrap())
             }
             _ => {
@@ -408,10 +403,10 @@ impl PipingServer {
                 Ok(http::Response::builder()
                     .status(405)
                     .header("Access-Control-Allow-Origin", "*")
-                    .body(BodyEnum::FullBody(full_body(Bytes::from(format!(
+                    .body(BodyEnum::FullBody(full_body(format!(
                         "[ERROR] Unsupported method: {}.\n",
                         req_parts.method
-                    )))))
+                    ))))
                     .unwrap())
             }
         }

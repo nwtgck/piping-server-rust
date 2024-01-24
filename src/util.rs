@@ -201,9 +201,17 @@ pub fn query_param_to_hash_map(query: Option<&str>) -> HashMap<String, String> {
 }
 
 #[inline]
-pub fn full_body<E>(data: Bytes) -> impl http_body::Body<Data = Bytes, Error = E> {
-    http_body_util::Full::new(data)
+pub fn full_body<B: Into<Bytes>, E>(
+    b: B,
+) -> http_body_util::combinators::MapErr<http_body_util::Full<Bytes>, fn(Infallible) -> E> {
+    http_body_util::Full::new(b.into())
         .map_err(|_: Infallible| unreachable!("Error of Full::new() should be Infallible"))
+}
+
+#[inline]
+pub fn empty_body<E>() -> impl http_body::Body<Data = Bytes, Error = E> {
+    http_body_util::Empty::<Bytes>::new()
+        .map_err(|_: Infallible| unreachable!("Error of Empty::new() should be Infallible"))
 }
 
 #[inline]
