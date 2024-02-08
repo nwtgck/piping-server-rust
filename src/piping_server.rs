@@ -329,9 +329,9 @@ impl PipingServer {
                 let sender_connected: bool = (&pipe_guard.data_sender).is_some();
                 // If a sender has been connected already
                 if sender_connected {
-                    return Ok(rejection_response(BodyEnum::FullBody(full_body(
-                        "[ERROR] Another sender has been connected on '{path}'.\n",
-                    ))));
+                    return Ok(rejection_response(BodyEnum::FullBody(full_body(format!(
+                        "[ERROR] Another sender has been connected on '{path}'.\n"
+                    )))));
                 }
 
                 let (mut res_body_tx, res_body_rx) = futures::channel::mpsc::channel::<
