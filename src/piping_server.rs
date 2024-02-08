@@ -223,13 +223,14 @@ impl PipingServer {
                     }
                 }
                 let query_params = query_param_to_hash_map(req_parts.uri.query());
-                let n_receivers_result: Result<u32, _> = get_n_receivers_result(&query_params);
-                if let Err(_) = n_receivers_result {
-                    return Ok(rejection_response(BodyEnum::FullBody(full_body(
-                        "[ERROR] Invalid \"n\" query parameter\n",
-                    ))));
-                }
-                let n_receivers = n_receivers_result.unwrap();
+                let n_receivers: u32 = match get_n_receivers_result(&query_params) {
+                    Ok(x) => x,
+                    Err(_) => {
+                        return Ok(rejection_response(BodyEnum::FullBody(full_body(
+                            "[ERROR] Invalid \"n\" query parameter\n",
+                        ))))
+                    }
+                };
                 if n_receivers <= 0 {
                     return Ok(rejection_response(BodyEnum::FullBody(full_body(format!(
                         "[ERROR] n should > 0, but n = {n_receivers}.\n"
@@ -302,13 +303,14 @@ impl PipingServer {
                     ))));
                 }
                 let query_params = query_param_to_hash_map(req_parts.uri.query());
-                let n_receivers_result: Result<u32, _> = get_n_receivers_result(&query_params);
-                if let Err(_) = n_receivers_result {
-                    return Ok(rejection_response(BodyEnum::FullBody(full_body(
-                        Bytes::from("[ERROR] Invalid \"n\" query parameter\n"),
-                    ))));
-                }
-                let n_receivers = n_receivers_result.unwrap();
+                let n_receivers: u32 = match get_n_receivers_result(&query_params) {
+                    Ok(x) => x,
+                    Err(_) => {
+                        return Ok(rejection_response(BodyEnum::FullBody(full_body(
+                            Bytes::from("[ERROR] Invalid \"n\" query parameter\n"),
+                        ))));
+                    }
+                };
                 if n_receivers <= 0 {
                     return Ok(rejection_response(BodyEnum::FullBody(full_body(format!(
                         "[ERROR] n should > 0, but n = {n_receivers}.\n"
@@ -459,19 +461,18 @@ async fn get_transfer_request(
     headers: &http::header::HeaderMap,
     body: hyper::body::Incoming,
 ) -> anyhow::Result<TransferRequest> {
-    let content_type_option = headers.get("content-type");
-    if content_type_option.is_none() {
-        return Ok(TransferRequest::from_hyper_incoming(headers, body));
-    }
-    let content_type = content_type_option.unwrap();
-    let mime_type_result: Result<mime::Mime, anyhow::Error> = match content_type.to_str() {
-        Ok(s) => s.parse().map_err(|e| anyhow!("{e:?}")),
-        Err(err) => Err(err.into()),
+    let content_type = match headers.get("content-type") {
+        Some(x) => x,
+        None => return Ok(TransferRequest::from_hyper_incoming(headers, body)),
     };
-    if mime_type_result.is_err() {
-        return Ok(TransferRequest::from_hyper_incoming(headers, body));
-    }
-    let mime_type = mime_type_result.unwrap();
+    let mime_type_result: Result<mime::Mime, anyhow::Error> =
+        (|| Ok(content_type.to_str()?.parse()?))();
+    let mime_type: mime::Mime = match mime_type_result {
+        Ok(x) => x,
+        Err(_) => {
+            return Ok(TransferRequest::from_hyper_incoming(headers, body));
+        }
+    };
     if mime_type.essence_str() != "multipart/form-data" {
         return Ok(TransferRequest::from_hyper_incoming(headers, body));
     }
