@@ -67,16 +67,28 @@ struct DataReceiver {
     res_sender: futures::channel::oneshot::Sender<http::Response<DataReceiverResponseBody>>,
 }
 
+struct Pipe {
+    data_sender: Option<DataSender>,
+    data_receiver: Option<DataReceiver>,
+}
+
+impl Pipe {
+    fn new() -> Self {
+        Self {
+            data_sender: None,
+            data_receiver: None,
+        }
+    }
+}
+
 pub struct PipingServer {
-    path_to_sender: Arc<dashmap::DashMap<String, DataSender>>,
-    path_to_receiver: Arc<dashmap::DashMap<String, DataReceiver>>,
+    path_to_pipe: Arc<dashmap::DashMap<String, futures::lock::Mutex<Pipe>>>,
 }
 
 impl Clone for PipingServer {
     fn clone(&self) -> Self {
         PipingServer {
-            path_to_sender: Arc::clone(&self.path_to_sender),
-            path_to_receiver: Arc::clone(&self.path_to_receiver),
+            path_to_pipe: Arc::clone(&self.path_to_pipe),
         }
     }
 }
@@ -84,8 +96,7 @@ impl Clone for PipingServer {
 impl PipingServer {
     pub fn new() -> Self {
         PipingServer {
-            path_to_sender: Arc::new(dashmap::DashMap::new()),
-            path_to_receiver: Arc::new(dashmap::DashMap::new()),
+            path_to_pipe: Arc::new(dashmap::DashMap::new()),
         }
     }
 
@@ -229,7 +240,12 @@ impl PipingServer {
                         "[ERROR] n > 1 not supported yet.\n",
                     ))));
                 }
-                let receiver_connected: bool = self.path_to_receiver.contains_key(path);
+                let pipe_mutex = self
+                    .path_to_pipe
+                    .entry(path.to_owned())
+                    .or_insert_with(|| futures::lock::Mutex::new(Pipe::new()));
+                let mut pipe_guard = pipe_mutex.lock().await;
+                let receiver_connected: bool = (&pipe_guard.data_receiver).is_some();
                 // If a receiver has been connected already
                 if receiver_connected {
                     return Ok(rejection_response(BodyEnum::FullBody(full_body(format!(
@@ -239,10 +255,9 @@ impl PipingServer {
                 let (res_sender, res_receiver) = futures::channel::oneshot::channel::<
                     http::Response<DataReceiverResponseBody>,
                 >();
-                let sender = self.path_to_sender.remove(path);
-                match sender {
+                match pipe_guard.data_sender.take() {
                     // If sender is found
-                    Some((_, mut data_sender)) => {
+                    Some(mut data_sender) => {
                         data_sender
                             .res_body_tx
                             .send(Ok(http_body::Frame::data(Bytes::from(
@@ -256,10 +271,13 @@ impl PipingServer {
                     }
                     // If sender is not found
                     None => {
-                        self.path_to_receiver
-                            .insert(path.to_string(), DataReceiver { res_sender });
+                        pipe_guard
+                            .data_receiver
+                            .replace(DataReceiver { res_sender });
                     }
                 };
+                drop(pipe_guard);
+                drop(pipe_mutex);
                 let (res_parts, res_body) = res_receiver.await?.into_parts();
                 Ok(http::Response::from_parts(
                     res_parts,
@@ -301,7 +319,12 @@ impl PipingServer {
                         "[ERROR] n > 1 not supported yet.\n",
                     ))));
                 }
-                let sender_connected: bool = self.path_to_sender.contains_key(path);
+                let pipe_mutex = self
+                    .path_to_pipe
+                    .entry(path.to_owned())
+                    .or_insert_with(|| futures::lock::Mutex::new(Pipe::new()));
+                let mut pipe_guard = pipe_mutex.lock().await;
+                let sender_connected: bool = (&pipe_guard.data_sender).is_some();
                 // If a sender has been connected already
                 if sender_connected {
                     return Ok(rejection_response(BodyEnum::FullBody(full_body(
@@ -313,10 +336,9 @@ impl PipingServer {
                     Result<http_body::Frame<Bytes>, anyhow::Error>,
                 >(1);
 
-                let receiver = self.path_to_receiver.remove(path);
-                match receiver {
+                match pipe_guard.data_receiver.take() {
                     // If receiver is found
-                    Some((_, data_receiver)) => {
+                    Some(data_receiver) => {
                         res_body_tx
                             .send(Ok(http_body::Frame::data(Bytes::from(
                                 "[INFO] 1 receiver(s) has/have been connected.\n",
@@ -343,17 +365,15 @@ impl PipingServer {
                             ))))
                             .await
                             .unwrap();
-                        self.path_to_sender.insert(
-                            path.to_string(),
-                            DataSender {
-                                req_headers: req_parts.headers,
-                                req_body,
-                                res_body_tx,
-                            },
-                        );
+                        pipe_guard.data_sender.replace(DataSender {
+                            req_headers: req_parts.headers,
+                            req_body,
+                            res_body_tx,
+                        });
                     }
                 }
-
+                drop(pipe_guard);
+                drop(pipe_mutex);
                 Ok(http::Response::builder()
                     .header("Content-Type", "text/plain")
                     .header("Access-Control-Allow-Origin", "*")
