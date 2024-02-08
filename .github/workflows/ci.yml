@@ -70,9 +70,9 @@ jobs:
             cp ./target/${{ matrix.target }}/release/piping-server ./piping-server-${{ matrix.target }}
             tar zcf ./piping-server-${{ matrix.target }}.tar.gz ./piping-server-${{ matrix.target }}
           fi
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
-          name: cross_build_artifact
+          name: build_artifact_${{ matrix.target }}
           path: |
             piping-server-*.tar.gz
             piping-server-*.zip
@@ -82,10 +82,10 @@ jobs:
       - cross_build
     runs-on: ubuntu-20.04
     steps:
-    - name: Download the artifact (cross build)
-      uses: actions/download-artifact@v3
+    - name: Download the artifact
+      uses: actions/download-artifact@v4
       with:
-        name: cross_build_artifact
+        name: build_artifact_x86_64-unknown-linux-musl
     - name: Extract binary
       run: tar xf piping-server-x86_64-unknown-linux-musl.tar.gz
     - name: Operational test
@@ -151,9 +151,9 @@ jobs:
         mkdir ./piping-server-${{ matrix.target }}
         cp ./target/${{ matrix.target }}/release/piping-server ./piping-server-${{ matrix.target }}
         tar zcf ./piping-server-${{ matrix.target }}.tar.gz ./piping-server-${{ matrix.target }}
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
-        name: mac_build_artifact
+        name: build_artifact_${{ matrix.target }}
         path: |
           piping-server-*.tar.gz
 
@@ -191,16 +191,12 @@ jobs:
       - build_for_mac
     runs-on: ubuntu-20.04
     steps:
-    - name: Download the artifact (cross build)
-      uses: actions/download-artifact@v3
+    - name: Download the artifacts
+      uses: actions/download-artifact@v4
       with:
-        name: cross_build_artifact
+        pattern: build_artifact_*
         path: ./publish_dir
-    - name: Download the artifact (macOS)
-      uses: actions/download-artifact@v3
-      with:
-        name: mac_build_artifact
-        path: ./publish_dir
+        merge-multiple: true
     - run: ls -la ./publish_dir
     - name: Release
       if: contains(github.ref, 'refs/tags/')
