@@ -2,33 +2,35 @@ name: CI
 
 on: [push]
 
+env:
+  CROSS_VERSION: 0.2.5
+  RUST_VERSION: 1.67.0
+  PIPING_SERVER_CHECK_VERSION: 0.13.2
+
 jobs:
   cargo_fmt:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - run: cargo fmt --all -- --check
 
   cargo_test:
     strategy:
       matrix:
         runs-on:
-          - ubuntu-20.04
-          - macOS-11
+          - ubuntu-22.04
+          - macOS-13
     runs-on: ${{ matrix.runs-on }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - run: cargo test -- --color=always --nocapture
 
   # MSRV (minimum supported Rust version)
   cargo_test_msrv:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: 1.60.0
-        override: true
+    - uses: actions/checkout@v4
+    - run: rustup default 1.65.0
     - run: cargo test -- --color=always --nocapture
 
   cross_build:
@@ -50,11 +52,12 @@ jobs:
           - x86_64-linux-android
           - x86_64-pc-windows-gnu
           - x86_64-unknown-linux-musl
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - run: rustup default ${RUST_VERSION}
+      - uses: actions/checkout@v4
       - name: Install cross
-        run: cd /tmp && curl -L https://github.com/cross-rs/cross/releases/download/v0.2.5/cross-x86_64-unknown-linux-musl.tar.gz | tar xzf -
+        run: cd /tmp && curl -L https://github.com/cross-rs/cross/releases/download/v${CROSS_VERSION}/cross-x86_64-unknown-linux-musl.tar.gz | tar xzf -
       - run: /tmp/cross build --target=${{ matrix.target }} --release --locked
       - name: Archive binary
         run: |
@@ -67,9 +70,9 @@ jobs:
             cp ./target/${{ matrix.target }}/release/piping-server ./piping-server-${{ matrix.target }}
             tar zcf ./piping-server-${{ matrix.target }}.tar.gz ./piping-server-${{ matrix.target }}
           fi
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
-          name: cross_build_artifact
+          name: build_artifact_${{ matrix.target }}
           path: |
             piping-server-*.tar.gz
             piping-server-*.zip
@@ -77,12 +80,12 @@ jobs:
   linux_operational_test:
     needs:
       - cross_build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-    - name: Download the artifact (cross build)
-      uses: actions/download-artifact@v3
+    - name: Download the artifact
+      uses: actions/download-artifact@v4
       with:
-        name: cross_build_artifact
+        name: build_artifact_x86_64-unknown-linux-musl
     - name: Extract binary
       run: tar xf piping-server-x86_64-unknown-linux-musl.tar.gz
     - name: Operational test
@@ -128,6 +131,7 @@ jobs:
         curl -F myfile=@/tmp/500M.dat localhost:8181/mypath3 &
         diff <(cat /tmp/500M.dat) <(curl localhost:8181/mypath3)
         rm /tmp/500M.dat
+      timeout-minutes: 1
 
   build_for_mac:
     strategy:
@@ -135,9 +139,10 @@ jobs:
         target:
           - x86_64-apple-darwin
           - aarch64-apple-darwin
-    runs-on: macOS-11
+    runs-on: macOS-13
     steps:
-    - uses: actions/checkout@v3
+    - run: rustup default ${RUST_VERSION}
+    - uses: actions/checkout@v4
     - run: rustup target add ${{ matrix.target }}
     - run: cargo build --target=${{ matrix.target }} --release --locked
     - name: Archive binary
@@ -146,71 +151,34 @@ jobs:
         mkdir ./piping-server-${{ matrix.target }}
         cp ./target/${{ matrix.target }}/release/piping-server ./piping-server-${{ matrix.target }}
         tar zcf ./piping-server-${{ matrix.target }}.tar.gz ./piping-server-${{ matrix.target }}
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
-        name: mac_build_artifact
+        name: build_artifact_${{ matrix.target }}
         path: |
           piping-server-*.tar.gz
 
   docker:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - run: docker build -t piping-server-rust .
-    - name: Operational test with Docker image
-      run: |
-        set -eux
-        # Create certificates
-        (mkdir ssl_certs && cd ssl_certs && openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -sha256 -nodes --subj '/CN=localhost/')
-        # Run a server
-        docker run -d --name=piping -p 8181:80 -p 8443:443 -v $PWD/ssl_certs:/ssl_certs piping-server-rust --http-port=80 --enable-https --https-port=443 --crt-path=/ssl_certs/server.crt --key-path=/ssl_certs/server.key
-        # Wait for server running
-        sleep 1
-
-        # Transfer data over HTTP
-        echo "hello, world" | curl -T - localhost:8181/mypath &
-        diff <(echo "hello, world") <(curl localhost:8181/mypath)
-        # Make a large random file
-        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=/tmp/500M.dat
-        # Transfer large data over HTTP
-        cat /tmp/500M.dat | curl -T - localhost:8181/mypath &
-        diff <(cat /tmp/500M.dat) <(curl localhost:8181/mypath)
-        rm /tmp/500M.dat
-
-        # Transfer data over HTTPS
-        echo "hello, world with HTTPS" | curl -kT - https://localhost:8443/mypath2 &
-        diff <(echo "hello, world with HTTPS") <(curl -k https://localhost:8443/mypath2)
-        # Make a large random file
-        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=/tmp/500M.dat
-        # Transfer large data over HTTPS
-        cat /tmp/500M.dat | curl -kT - https://localhost:8443/mypath2 &
-        diff <(cat /tmp/500M.dat) <(curl -k https://localhost:8443/mypath2)
-        rm /tmp/500M.dat
-
-        # HTTP/2 support
-        (echo hello | curl -ksST- https://localhost:8443/mypath3 -o /dev/null -w '%{http_version}:%{http_code}\n' > /tmp/http2_post.txt) &
-        post_pid=$!
-        diff <(echo '2:200') <(curl -ksS https://localhost:8443/mypath3 -o /dev/null -w '%{http_version}:%{http_code}\n')
-        wait $post_pid
-        diff <(echo '2:200') /tmp/http2_post.txt
-
-        # Transfer data using multipart
-        # Make a large random file
-        dd if=/dev/urandom iflag=count_bytes count=500M bs=1M of=/tmp/500M.dat
-        # Transfer large data over HTTP
-        curl -F myfile=@/tmp/500M.dat localhost:8181/mypath3 &
-        diff <(cat /tmp/500M.dat) <(curl localhost:8181/mypath3)
-        rm /tmp/500M.dat
-
-        # Print server log
-        docker logs piping
-        # Delete container
-        docker rm -f piping
+    - name: Create certificates
+      run: cd /tmp && mkdir ssl_certs && cd ssl_certs && openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -sha256 -nodes --subj '/CN=localhost/'
+    - name: Install piping-server-check
+      run: cd /tmp && wget -O piping-server-check.deb https://github.com/nwtgck/piping-server-check/releases/download/v${PIPING_SERVER_CHECK_VERSION}/piping-server-check-${PIPING_SERVER_CHECK_VERSION}-linux-amd64.deb && sudo dpkg -i piping-server-check.deb
+    - name: piping-server-check
+      run: piping-server-check --http1.1 --http1.1-tls --h2c --h2 --tls-skip-verify --compromise post_cancel_post --compromise get_cancel_get --concurrency 100 --server-command='mkdir -p /tmp/logs && exec docker run -p $HTTP_PORT:8080 -p $HTTPS_PORT:8443 -v /tmp/ssl_certs:/tmp/ssl_certs piping-server-rust --http-port=8080 --enable-https --https-port=8443 --crt-path=/tmp/ssl_certs/server.crt --key-path=/tmp/ssl_certs/server.key 2>&1 | tee /tmp/logs/$(date "+%s%3N").log > /dev/stderr' --transfer-speed-byte $((1024 * 1024 * 1024 * 1024)) --transfer-span 3s --transfer-span 10s --transfer-span 1m --transfer-span 2m --transfer-span 3m --transfer-span 4m
+      timeout-minutes: 6
+    - name: Show server logs from piping-server-check
+      run: cat /tmp/logs/*
+    - uses: docker/login-action@v3
+      with:
+        username: nwtgck
+        password: ${{ secrets.DOCKER_HUB_TOKEN }}
     - name: Push if branch is develop
       if: github.ref == 'refs/heads/develop'
       run: |
         set -eu
-        echo ${{ secrets.DOCKER_HUB_TOKEN }} | docker login -u nwtgck --password-stdin
         GIT_BRANCH=${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}
         docker tag piping-server-rust nwtgck/piping-server-rust:${GIT_BRANCH}
         docker push nwtgck/piping-server-rust:${GIT_BRANCH}
@@ -221,18 +189,14 @@ jobs:
       - cargo_test
       - linux_operational_test
       - build_for_mac
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-    - name: Download the artifact (cross build)
-      uses: actions/download-artifact@v3
+    - name: Download the artifacts
+      uses: actions/download-artifact@v4
       with:
-        name: cross_build_artifact
+        pattern: build_artifact_*
         path: ./publish_dir
-    - name: Download the artifact (macOS)
-      uses: actions/download-artifact@v3
-      with:
-        name: mac_build_artifact
-        path: ./publish_dir
+        merge-multiple: true
     - run: ls -la ./publish_dir
     - name: Release
       if: contains(github.ref, 'refs/tags/')

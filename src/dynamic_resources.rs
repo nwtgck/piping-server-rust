@@ -1,6 +1,6 @@
 use crate::piping_server;
+use core::ops::Deref as _;
 use std::collections::HashMap;
-use std::ops::Deref;
 use url::Url;
 
 fn escape_html_attribute(s: &str) -> String {
