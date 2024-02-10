@@ -135,7 +135,7 @@ impl PipingServer {
                         .status(200)
                         .header("Content-Type", "text/html")
                         .header("Access-Control-Allow-Origin", "*")
-                        .body(BodyEnum::FullBody(full_body(dynamic_resources::index())))
+                        .body(BodyEnum::FullBody(full_body(&**dynamic_resources::INDEX)))
                         .unwrap());
                 }
                 reserved_paths::NO_SCRIPT => {

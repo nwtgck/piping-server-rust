@@ -762,6 +762,7 @@ dependencies = [
  "mime",
  "mpart-async",
  "notify",
+ "once_cell",
  "pin-project-lite",
  "regex",
  "rustls",
