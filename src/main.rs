@@ -70,59 +70,54 @@ async fn main() -> anyhow::Result<()> {
         })
     };
 
-    let serve_https = async move {
-        if args.enable_https {
-            if let (Some(https_port), Some(crt_path), Some(key_path)) =
-                (args.https_port, args.crt_path, args.key_path)
-            {
-                let piping_server = piping_server.clone();
-
-                let tokio_handle = tokio::runtime::Handle::current();
-                let tls_cfg_rwlock_arc: Arc<tokio::sync::RwLock<Arc<rustls::ServerConfig>>> =
-                    util::hot_reload_tls_cfg(tokio_handle, crt_path, key_path);
-
-                let tcp_listener =
-                    tokio::net::TcpListener::bind(SocketAddr::new(args.host, https_port)).await?;
-                log::info!("HTTPS server is listening on {https_port}...");
-
-                let piping_server_service =
-                    hyper::service::service_fn(move |req| piping_server.clone().handle(true, req));
-
-                loop {
-                    let (stream, _) = tcp_listener.accept().await?;
-                    let rustls_config = tls_cfg_rwlock_arc.clone().read().await.clone();
-                    let stream = match tokio_rustls::TlsAcceptor::from(rustls_config)
-                        .accept(stream)
-                        .await
-                    {
-                        Ok(stream) => stream,
-                        Err(err) => {
-                            log::error!("Failed to accept TLS connection: {err:?}");
-                            continue;
-                        }
-                    };
-                    let piping_server_service = piping_server_service.clone();
-                    tokio::task::spawn(async move {
-                        if let Err(err) = hyper_util::server::conn::auto::Builder::new(
-                            hyper_util::rt::tokio::TokioExecutor::new(),
-                        )
-                        .serve_connection(
-                            hyper_util::rt::TokioIo::new(stream),
-                            piping_server_service,
-                        )
-                        .await
-                        {
-                            log::error!("Failed to serve HTTPS connection: {err:?}");
-                        }
-                    });
-                }
-            } else {
-                anyhow::bail!("--https-port, --crt-path and --key-path should be specified");
-            }
-        } else {
-            Ok(())
+    let serve_https = (|| async {
+        if !args.enable_https {
+            return Ok(());
         }
-    };
+        let (Some(https_port), Some(crt_path), Some(key_path)) =
+            (args.https_port, args.crt_path, args.key_path)
+        else {
+            anyhow::bail!("--https-port, --crt-path and --key-path should be specified");
+        };
+        let piping_server = piping_server.clone();
+
+        let tokio_handle = tokio::runtime::Handle::current();
+        let tls_cfg_rwlock_arc: Arc<tokio::sync::RwLock<Arc<rustls::ServerConfig>>> =
+            util::hot_reload_tls_cfg(tokio_handle, crt_path, key_path);
+
+        let tcp_listener =
+            tokio::net::TcpListener::bind(SocketAddr::new(args.host, https_port)).await?;
+        log::info!("HTTPS server is listening on {https_port}...");
+
+        let piping_server_service =
+            hyper::service::service_fn(move |req| piping_server.clone().handle(true, req));
+
+        loop {
+            let (stream, _) = tcp_listener.accept().await?;
+            let rustls_config = tls_cfg_rwlock_arc.clone().read().await.clone();
+            let stream = match tokio_rustls::TlsAcceptor::from(rustls_config)
+                .accept(stream)
+                .await
+            {
+                Ok(stream) => stream,
+                Err(err) => {
+                    log::error!("Failed to accept TLS connection: {err:?}");
+                    continue;
+                }
+            };
+            let piping_server_service = piping_server_service.clone();
+            tokio::task::spawn(async move {
+                if let Err(err) = hyper_util::server::conn::auto::Builder::new(
+                    hyper_util::rt::tokio::TokioExecutor::new(),
+                )
+                .serve_connection(hyper_util::rt::TokioIo::new(stream), piping_server_service)
+                .await
+                {
+                    log::error!("Failed to serve HTTPS connection: {err:?}");
+                }
+            });
+        }
+    })();
 
     let _: ((), ()) = futures::try_join!(serve_http, serve_https)?;
     Ok(())
