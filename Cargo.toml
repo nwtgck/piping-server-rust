@@ -33,6 +33,6 @@ auto_enums = { version = "0.8", default-features = false, features = ["http_body
 seq-macro = "0.3"
 
 [dev-dependencies]
-specit = {version  = "0.4.0", features = ["tokio"] }
+specit = { version = "0.4.0", features = ["tokio"] }
 hyper = { version = "1.2", features = ["client"] }
 regex = "1.10"
