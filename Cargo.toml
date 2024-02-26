@@ -2,7 +2,7 @@
 name = "piping-server"
 version = "0.17.1-SNAPSHOT"
 authors = ["Ryo Ota <nwtgck@nwtgck.org>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 clap = { version = "4.0.32", features = ["derive"] }
