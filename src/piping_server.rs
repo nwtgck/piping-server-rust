@@ -223,13 +223,10 @@ impl PipingServer {
                     }
                 }
                 let query_params = query_param_to_hash_map(req_parts.uri.query());
-                let n_receivers: u32 = match get_n_receivers_result(&query_params) {
-                    Ok(x) => x,
-                    Err(_) => {
-                        return Ok(rejection_response(BodyEnum::FullBody(full_body(
-                            "[ERROR] Invalid \"n\" query parameter\n",
-                        ))))
-                    }
+                let Ok(n_receivers): Result<u32, _> = get_n_receivers_result(&query_params) else {
+                    return Ok(rejection_response(BodyEnum::FullBody(full_body(
+                        "[ERROR] Invalid \"n\" query parameter\n",
+                    ))));
                 };
                 if n_receivers <= 0 {
                     return Ok(rejection_response(BodyEnum::FullBody(full_body(format!(
@@ -303,13 +300,10 @@ impl PipingServer {
                     ))));
                 }
                 let query_params = query_param_to_hash_map(req_parts.uri.query());
-                let n_receivers: u32 = match get_n_receivers_result(&query_params) {
-                    Ok(x) => x,
-                    Err(_) => {
-                        return Ok(rejection_response(BodyEnum::FullBody(full_body(
-                            Bytes::from("[ERROR] Invalid \"n\" query parameter\n"),
-                        ))));
-                    }
+                let Ok(n_receivers): Result<u32, _> = get_n_receivers_result(&query_params) else {
+                    return Ok(rejection_response(BodyEnum::FullBody(full_body(
+                        Bytes::from("[ERROR] Invalid \"n\" query parameter\n"),
+                    ))));
                 };
                 if n_receivers <= 0 {
                     return Ok(rejection_response(BodyEnum::FullBody(full_body(format!(
@@ -461,17 +455,13 @@ async fn get_transfer_request(
     headers: &http::header::HeaderMap,
     body: hyper::body::Incoming,
 ) -> anyhow::Result<TransferRequest> {
-    let content_type = match headers.get("content-type") {
-        Some(x) => x,
-        None => return Ok(TransferRequest::from_hyper_incoming(headers, body)),
+    let Some(content_type) = headers.get("content-type") else {
+        return Ok(TransferRequest::from_hyper_incoming(headers, body));
     };
     let mime_type_result: Result<mime::Mime, anyhow::Error> =
         (|| Ok(content_type.to_str()?.parse()?))();
-    let mime_type: mime::Mime = match mime_type_result {
-        Ok(x) => x,
-        Err(_) => {
-            return Ok(TransferRequest::from_hyper_incoming(headers, body));
-        }
+    let Ok(mime_type): Result<mime::Mime, _> = mime_type_result else {
+        return Ok(TransferRequest::from_hyper_incoming(headers, body));
     };
     if mime_type.essence_str() != "multipart/form-data" {
         return Ok(TransferRequest::from_hyper_incoming(headers, body));
