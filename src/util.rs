@@ -172,20 +172,34 @@ pub fn hot_reload_tls_cfg(
             )?;
 
             loop {
-                match rx.recv() {
-                    Ok(_event) => match load_tls_config(cert_path.deref(), key_path.deref()) {
-                        Ok(tls_cfg) => {
-                            let tls_cfg_rwlock = tls_cfg_rwlock.clone();
-                            tokio_handle.spawn(async move {
-                                *(tls_cfg_rwlock.write().await) = Arc::new(tls_cfg);
-                                log::info!("Successfully new certificates loaded");
-                            });
-                        }
-                        Err(e) => log::error!("Failed to load new certificates: {e:?}"),
-                    },
-                    Err(e) => log::error!("Watch certificates error: {e:?}"),
-                }
+                let received: Result<_, _> = match rx.recv() {
+                    Ok(x) => x,
+                    Err(e) => {
+                        log::error!("Watch certificates error: {e:?}");
+                        break;
+                    }
+                };
+                let _event: notify::Event = match received {
+                    Ok(x) => x,
+                    Err(e) => {
+                        log::error!("Watch certificates error: {e:?}");
+                        continue;
+                    }
+                };
+                let tls_cfg = match load_tls_config(cert_path.deref(), key_path.deref()) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        log::error!("Failed to load new certificates: {e:?}");
+                        continue;
+                    }
+                };
+                let tls_cfg_rwlock = tls_cfg_rwlock.clone();
+                tokio_handle.spawn(async move {
+                    *(tls_cfg_rwlock.write().await) = Arc::new(tls_cfg);
+                    log::info!("Successfully new certificates loaded");
+                });
             }
+            Ok(())
         }
     });
 
