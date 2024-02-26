@@ -1,6 +1,5 @@
 use core::convert::Infallible;
 use core::convert::TryFrom;
-use core::future::Future;
 use core::ops::Deref as _;
 use core::pin::Pin;
 use core::task::{Context, Poll};
@@ -226,9 +225,4 @@ pub fn full_body<B: Into<Bytes>, E>(
 pub fn empty_body<E>() -> impl http_body::Body<Data = Bytes, Error = E> {
     http_body_util::Empty::<Bytes>::new()
         .map_err(|_: Infallible| unreachable!("Error of Empty::new() should be Infallible"))
-}
-
-#[inline]
-pub fn future_with_output_type<O, F: Future<Output = O>>(fut: F) -> F {
-    fut
 }

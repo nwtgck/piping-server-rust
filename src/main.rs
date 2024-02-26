@@ -46,7 +46,7 @@ async fn main() -> anyhow::Result<()> {
     let serve_http = {
         let piping_server = piping_server.clone();
         let args = args.clone();
-        util::future_with_output_type::<anyhow::Result<()>, _>(async move {
+        async move {
             let tcp_listener =
                 tokio::net::TcpListener::bind(SocketAddr::new(args.host, args.http_port)).await?;
             log::info!("HTTP server is listening on {}...", args.http_port);
@@ -67,7 +67,9 @@ async fn main() -> anyhow::Result<()> {
                     }
                 });
             }
-        })
+            #[allow(unreachable_code)]
+            Ok::<_, anyhow::Error>(())
+        }
     };
 
     let serve_https = (|| async {
