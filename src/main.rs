@@ -8,7 +8,8 @@ use piping_server::util;
 /// Piping Server in Rust
 #[derive(clap::Parser, Debug, Clone)]
 #[clap(name = "piping-server")]
-#[clap(about, version)]
+#[clap(about)]
+#[command(disable_version_flag = true, version = env!("CARGO_PKG_VERSION"))]
 struct Args {
     /// Bind address, either IPv4 or IPv6 (e.g. 127.0.0.1, ::1)
     #[clap(long, default_value = "0.0.0.0")]
@@ -28,6 +29,10 @@ struct Args {
     /// Private key path
     #[clap(long)]
     key_path: Option<String>,
+
+    /// Print version
+    #[clap(long, action = clap::ArgAction::Version, value_parser = clap::value_parser!(bool))]
+    version: (),
 }
 
 #[tokio::main]

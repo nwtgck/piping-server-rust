@@ -89,6 +89,6 @@ Options:
       --https-port <HTTPS_PORT>  HTTPS port
       --crt-path <CRT_PATH>      Certification path
       --key-path <KEY_PATH>      Private key path
+      --version                  Print version
   -h, --help                     Print help
-  -V, --version                  Print version
 ```
