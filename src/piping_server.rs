@@ -120,11 +120,16 @@ impl PipingServer {
 
         let (req_parts, req_body) = req.into_parts();
         let path = req_parts.uri.path();
+        let path_and_query: &str = req_parts
+            .uri
+            .path_and_query()
+            .map(|x| x.as_str())
+            .unwrap_or_else(|| "");
 
         log::info!(
-            "{} {:} {:?}",
+            "{} {} {:?}",
             req_parts.method,
-            req_parts.uri,
+            path_and_query,
             req_parts.version,
         );
 
