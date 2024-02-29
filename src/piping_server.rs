@@ -120,11 +120,16 @@ impl PipingServer {
 
         let (req_parts, req_body) = req.into_parts();
         let path = req_parts.uri.path();
+        let path_and_query: &str = req_parts
+            .uri
+            .path_and_query()
+            .map(|x| x.as_str())
+            .unwrap_or_else(|| "");
 
         log::info!(
-            "{} {:} {:?}",
+            "{} {} {:?}",
             req_parts.method,
-            req_parts.uri,
+            path_and_query,
             req_parts.version,
         );
 
@@ -135,7 +140,7 @@ impl PipingServer {
                         .status(200)
                         .header("Content-Type", "text/html")
                         .header("Access-Control-Allow-Origin", "*")
-                        .body(BodyEnum::FullBody(full_body(dynamic_resources::index())))
+                        .body(BodyEnum::FullBody(full_body(&**dynamic_resources::INDEX)))
                         .unwrap());
                 }
                 reserved_paths::NO_SCRIPT => {
@@ -223,13 +228,10 @@ impl PipingServer {
                     }
                 }
                 let query_params = query_param_to_hash_map(req_parts.uri.query());
-                let n_receivers: u32 = match get_n_receivers_result(&query_params) {
-                    Ok(x) => x,
-                    Err(_) => {
-                        return Ok(rejection_response(BodyEnum::FullBody(full_body(
-                            "[ERROR] Invalid \"n\" query parameter\n",
-                        ))))
-                    }
+                let Ok(n_receivers): Result<u32, _> = get_n_receivers_result(&query_params) else {
+                    return Ok(rejection_response(BodyEnum::FullBody(full_body(
+                        "[ERROR] Invalid \"n\" query parameter\n",
+                    ))));
                 };
                 if n_receivers <= 0 {
                     return Ok(rejection_response(BodyEnum::FullBody(full_body(format!(
@@ -303,13 +305,10 @@ impl PipingServer {
                     ))));
                 }
                 let query_params = query_param_to_hash_map(req_parts.uri.query());
-                let n_receivers: u32 = match get_n_receivers_result(&query_params) {
-                    Ok(x) => x,
-                    Err(_) => {
-                        return Ok(rejection_response(BodyEnum::FullBody(full_body(
-                            Bytes::from("[ERROR] Invalid \"n\" query parameter\n"),
-                        ))));
-                    }
+                let Ok(n_receivers): Result<u32, _> = get_n_receivers_result(&query_params) else {
+                    return Ok(rejection_response(BodyEnum::FullBody(full_body(
+                        Bytes::from("[ERROR] Invalid \"n\" query parameter\n"),
+                    ))));
                 };
                 if n_receivers <= 0 {
                     return Ok(rejection_response(BodyEnum::FullBody(full_body(format!(
@@ -461,17 +460,13 @@ async fn get_transfer_request(
     headers: &http::header::HeaderMap,
     body: hyper::body::Incoming,
 ) -> anyhow::Result<TransferRequest> {
-    let content_type = match headers.get("content-type") {
-        Some(x) => x,
-        None => return Ok(TransferRequest::from_hyper_incoming(headers, body)),
+    let Some(content_type) = headers.get("content-type") else {
+        return Ok(TransferRequest::from_hyper_incoming(headers, body));
     };
     let mime_type_result: Result<mime::Mime, anyhow::Error> =
         (|| Ok(content_type.to_str()?.parse()?))();
-    let mime_type: mime::Mime = match mime_type_result {
-        Ok(x) => x,
-        Err(_) => {
-            return Ok(TransferRequest::from_hyper_incoming(headers, body));
-        }
+    let Ok(mime_type): Result<mime::Mime, _> = mime_type_result else {
+        return Ok(TransferRequest::from_hyper_incoming(headers, body));
     };
     if mime_type.essence_str() != "multipart/form-data" {
         return Ok(TransferRequest::from_hyper_incoming(headers, body));

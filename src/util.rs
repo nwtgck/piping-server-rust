@@ -1,6 +1,5 @@
 use core::convert::Infallible;
 use core::convert::TryFrom;
-use core::future::Future;
 use core::ops::Deref as _;
 use core::pin::Pin;
 use core::task::{Context, Poll};
@@ -172,20 +171,34 @@ pub fn hot_reload_tls_cfg(
             )?;
 
             loop {
-                match rx.recv() {
-                    Ok(_event) => match load_tls_config(cert_path.deref(), key_path.deref()) {
-                        Ok(tls_cfg) => {
-                            let tls_cfg_rwlock = tls_cfg_rwlock.clone();
-                            tokio_handle.spawn(async move {
-                                *(tls_cfg_rwlock.write().await) = Arc::new(tls_cfg);
-                                log::info!("Successfully new certificates loaded");
-                            });
-                        }
-                        Err(e) => log::error!("Failed to load new certificates: {e:?}"),
-                    },
-                    Err(e) => log::error!("Watch certificates error: {e:?}"),
-                }
+                let received: Result<_, _> = match rx.recv() {
+                    Ok(x) => x,
+                    Err(e) => {
+                        log::error!("Watch certificates error: {e:?}");
+                        break;
+                    }
+                };
+                let _event: notify::Event = match received {
+                    Ok(x) => x,
+                    Err(e) => {
+                        log::error!("Watch certificates error: {e:?}");
+                        continue;
+                    }
+                };
+                let tls_cfg = match load_tls_config(cert_path.deref(), key_path.deref()) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        log::error!("Failed to load new certificates: {e:?}");
+                        continue;
+                    }
+                };
+                let tls_cfg_rwlock = tls_cfg_rwlock.clone();
+                tokio_handle.spawn(async move {
+                    *(tls_cfg_rwlock.write().await) = Arc::new(tls_cfg);
+                    log::info!("Successfully new certificates loaded");
+                });
             }
+            Ok(())
         }
     });
 
@@ -212,9 +225,4 @@ pub fn full_body<B: Into<Bytes>, E>(
 pub fn empty_body<E>() -> impl http_body::Body<Data = Bytes, Error = E> {
     http_body_util::Empty::<Bytes>::new()
         .map_err(|_: Infallible| unreachable!("Error of Empty::new() should be Infallible"))
-}
-
-#[inline]
-pub fn future_with_output_type<O, F: Future<Output = O>>(fut: F) -> F {
-    fut
 }

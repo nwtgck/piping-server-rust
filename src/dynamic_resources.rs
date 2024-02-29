@@ -11,10 +11,10 @@ fn escape_html_attribute(s: &str) -> String {
         .replace(">", "&gt;")
 }
 
-pub fn index() -> String {
+pub static INDEX: once_cell::sync::Lazy<String> = once_cell::sync::Lazy::new(|| {
     let version = env!("CARGO_PKG_VERSION");
     let no_script_path = &piping_server::reserved_paths::NO_SCRIPT[1..];
-    return std::format!(
+    format!(
         // language=html
         r#"<!DOCTYPE html>
 <html lang="en">
@@ -128,8 +128,8 @@ pub fn index() -> String {
 </body>
 </html>
 "#
-    );
-}
+    )
+});
 
 pub fn help(base_url: &Url) -> String {
     let version: &'static str = env!("CARGO_PKG_VERSION");

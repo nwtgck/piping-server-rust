@@ -5,6 +5,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.18.0] - 2024-02-29
+### Changed
+* Update dependencies
+* (Docker) Dockerfile supports linux/arm64 but not published image
+* (internal) Use Rust edition 2021
+
+### Removed
+* **Breaking:** remove -V flag for compatibility with the original piping-server
+
+### Fixed
+* Log path and query instead of full URL in HTTPS
+
 ## [0.17.0] - 2024-02-10
 ### Changed
 * Update dependencies
@@ -268,7 +280,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 * Implement basic Piping Server
 
-[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/nwtgck/piping-server-rust/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/nwtgck/piping-server-rust/compare/v0.14.1...v0.15.0
