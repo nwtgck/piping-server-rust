@@ -6,7 +6,7 @@ ARG TARGETPLATFORM
 
 ENV TINI_STATIC_VERSION 0.19.0
 
-RUN apt update && apt install -y musl-tools
+RUN apt update && apt install -y cmake clang-16 musl-tools
 
 RUN case $TARGETPLATFORM in\
       linux/amd64)  rust_target="x86_64-unknown-linux-musl";\
