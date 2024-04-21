@@ -16,7 +16,7 @@ hyper-util = { version = "0.1", default-features = false, features = ["server-au
 http = "1.1"
 http-body = "1.0"
 http-body-util = "0.1"
-rustls = "0.22"
+rustls = "0.23"
 rustls-pemfile = "2.1"
 tokio-rustls = "0.25"
 getrandom = { version = "0.2", default-features = false }
