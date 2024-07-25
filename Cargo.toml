@@ -8,7 +8,7 @@ edition = "2021"
 clap = { version = "4.1", features = ["derive"] }
 anyhow = "1.0"
 log = "0.4"
-env_logger = "0.10"
+env_logger = "0.11"
 futures = { version = "0.3", features = ["std"] }
 tokio = { version = "1.38", features = ["rt-multi-thread", "macros", "net"] }
 hyper = { version = "1.4", default-features = false, features = ["server", "http1", "http2"] }
