@@ -35,4 +35,4 @@ seq-macro = "0.3"
 [dev-dependencies]
 specit = { version = "0.4.0", features = ["tokio"] }
 hyper = { version = "1.4", features = ["client"] }
-regex = "1.10"
+regex = "1.11"
