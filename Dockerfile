@@ -1,6 +1,6 @@
 # NOTE: Multi-stage Build
 
-FROM rust:1.81.0 as build
+FROM rust:1.82.0 as build
 
 ARG TARGETPLATFORM
 
