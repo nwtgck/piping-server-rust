@@ -520,7 +520,7 @@ async fn transfer(
         get_transfer_request(&data_sender_req_headers, data_sender_req_body).await?;
     // The finish_waiter will tell when the body is finished
     let (finish_detectable_body, sender_req_body_finish_waiter) =
-        finish_detectable_body(transfer_request.body, Some(&data_sender_req_headers));
+        finish_detectable_body(transfer_request.body);
     let x_piping = data_sender_req_headers.get_all("x-piping");
     let has_x_piping = data_sender_req_headers.contains_key("x-piping");
     // Create receiver's response
