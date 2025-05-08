@@ -140,8 +140,7 @@ impl PipingServer {
                         .status(200)
                         .header("Content-Type", "text/html")
                         .header("Access-Control-Allow-Origin", "*")
-                        .body(BodyEnum::FullBody(full_body(&**dynamic_resources::INDEX)))
-                        .unwrap());
+                        .body(BodyEnum::FullBody(full_body(&**dynamic_resources::INDEX)))?);
                 }
                 reserved_paths::NO_SCRIPT => {
                     use base64::Engine as _;
@@ -160,8 +159,7 @@ impl PipingServer {
                             "Content-Security-Policy",
                             format!("default-src 'none'; style-src 'nonce-{style_nonce}'"),
                         )
-                        .body(BodyEnum::FullBody(full_body(html)))
-                        .unwrap());
+                        .body(BodyEnum::FullBody(full_body(html)))?);
                 }
                 reserved_paths::VERSION => {
                     let version: &'static str = env!("CARGO_PKG_VERSION");
@@ -169,8 +167,7 @@ impl PipingServer {
                         .status(200)
                         .header("Content-Type", "text/plain")
                         .header("Access-Control-Allow-Origin", "*")
-                        .body(BodyEnum::FullBody(full_body(format!("{version} (Rust)\n"))))
-                        .unwrap());
+                        .body(BodyEnum::FullBody(full_body(format!("{version} (Rust)\n"))))?);
                 }
                 reserved_paths::HELP => {
                     let host: &str = req_parts
@@ -196,22 +193,19 @@ impl PipingServer {
                         .status(200)
                         .header("Content-Type", "text/plain")
                         .header("Access-Control-Allow-Origin", "*")
-                        .body(BodyEnum::FullBody(full_body(help)))
-                        .unwrap());
+                        .body(BodyEnum::FullBody(full_body(help)))?);
                 }
                 reserved_paths::FAVICON_ICO => {
                     return Ok(http::Response::builder()
                         .status(204)
-                        .body(BodyEnum::EmptyBody(empty_body()))
-                        .unwrap());
+                        .body(BodyEnum::EmptyBody(empty_body()))?);
                 }
                 reserved_paths::ROBOTS_TXT => {
                     return Ok(http::Response::builder()
                         .status(404)
                         // explicit `content-length: 0`: https://github.com/hyperium/hyper/pull/2836
                         .header("Content-Length", 0)
-                        .body(BodyEnum::EmptyBody(empty_body()))
-                        .unwrap());
+                        .body(BodyEnum::EmptyBody(empty_body()))?);
                 }
                 _ => {}
             }
@@ -266,11 +260,9 @@ impl PipingServer {
                             .send(Ok(http_body::Frame::data(Bytes::from(
                                 "[INFO] A receiver was connected.\n",
                             ))))
-                            .await
-                            .unwrap();
+                            .await?;
                         transfer(path.to_string(), data_sender, DataReceiver { res_sender })
-                            .await
-                            .unwrap();
+                            .await?;
                     }
                     // If sender is not found
                     None => {
@@ -344,8 +336,7 @@ impl PipingServer {
                             .send(Ok(http_body::Frame::data(Bytes::from(
                                 "[INFO] 1 receiver(s) has/have been connected.\n",
                             ))))
-                            .await
-                            .unwrap();
+                            .await?;
                         transfer(
                             path.to_string(),
                             DataSender {
@@ -355,8 +346,7 @@ impl PipingServer {
                             },
                             data_receiver,
                         )
-                        .await
-                        .unwrap();
+                        .await?;
                     }
                     // If receiver is not found
                     None => {
@@ -364,8 +354,7 @@ impl PipingServer {
                             .send(Ok(http_body::Frame::data(Bytes::from(
                                 "[INFO] Waiting for 1 receiver(s)...\n",
                             ))))
-                            .await
-                            .unwrap();
+                            .await?;
                         pipe_guard.data_sender.replace(DataSender {
                             req_headers: req_parts.headers,
                             req_body,
@@ -380,8 +369,7 @@ impl PipingServer {
                     .header("Access-Control-Allow-Origin", "*")
                     .body(BodyEnum::Body2(http_body_util::StreamBody::new(
                         res_body_rx,
-                    )))
-                    .unwrap())
+                    )))?)
             }
             http::Method::OPTIONS => {
                 // Response for Preflight request
@@ -416,8 +404,7 @@ impl PipingServer {
                     )
                     .header("Access-Control-Max-Age", 86400)
                     .header("Content-Length", 0)
-                    .body(BodyEnum::EmptyBody(empty_body()))
-                    .unwrap())
+                    .body(BodyEnum::EmptyBody(empty_body()))?)
             }
             _ => {
                 log::info!("Unsupported method: {}", req_parts.method);
@@ -427,8 +414,7 @@ impl PipingServer {
                     .body(BodyEnum::FullBody(full_body(format!(
                         "[ERROR] Unsupported method: {}.\n",
                         req_parts.method
-                    ))))
-                    .unwrap())
+                    ))))?)
             }
         }
     }
@@ -535,8 +521,7 @@ async fn transfer(
             if has_x_piping { Some("X-Piping") } else { None },
         )
         .header("X-Robots-Tag", "none")
-        .body(finish_detectable_body)
-        .unwrap();
+        .body(finish_detectable_body)?;
     // Return response to receiver
     data_receiver
         .res_sender
@@ -548,25 +533,23 @@ async fn transfer(
             .send(Ok(http_body::Frame::data(Bytes::from(
                 "[INFO] Start sending to 1 receiver(s)...\n",
             ))))
-            .await
-            .unwrap();
+            .await?;
         // Wait for sender's request body finished
         if let Ok(_) = sender_req_body_finish_waiter.await {
             data_sender_res_body_tx
                 .send(Ok(http_body::Frame::data(Bytes::from(
                     "[INFO] Sent successfully!\n",
                 ))))
-                .await
-                .unwrap();
+                .await?;
         } else {
             data_sender_res_body_tx
                 .send(Ok(http_body::Frame::data(Bytes::from(
                     "[INFO] All receiver(s) was/were halfway disconnected.\n",
                 ))))
-                .await
-                .unwrap();
+                .await?;
         }
         log::info!("Transfer end: '{path}'");
+        Ok::<_, anyhow::Error>(())
     });
     return Ok(());
 }
