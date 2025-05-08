@@ -67,6 +67,7 @@ pin_project! {
         #[pin]
         body: B,
         finish_notifier: Option<futures::channel::oneshot::Sender<()>>,
+        is_fixed_length: bool,
     }
 }
 
@@ -78,8 +79,18 @@ impl<B: http_body::Body> http_body::Body for FinishDetectableBody<B> {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
+        let is_fixed_length: bool = self.is_fixed_length;
         let mut this = self.project();
         match this.body.as_mut().poll_frame(cx) {
+            // Fixed-length body can not be Poll::Ready(None)
+            // https://github.com/nwtgck/piping-server-rust/pull/718
+            poll @ Poll::Ready(Some(_)) if is_fixed_length && this.body.is_end_stream() => {
+                // Notify finish
+                if let Some(notifier) = this.finish_notifier.take() {
+                    notifier.send(()).unwrap();
+                }
+                poll
+            }
             // If body is finished
             Poll::Ready(None) => {
                 // Notify finish
@@ -110,10 +121,12 @@ pub fn finish_detectable_body<B: http_body::Body>(
     futures::channel::oneshot::Receiver<()>,
 ) {
     let (finish_notifier, finish_waiter) = futures::channel::oneshot::channel::<()>();
+    let size_hint = body.size_hint();
     (
         FinishDetectableBody {
             body,
             finish_notifier: Some(finish_notifier),
+            is_fixed_length: size_hint.upper() == Some(size_hint.lower()),
         },
         finish_waiter,
     )
