@@ -183,7 +183,7 @@ jobs:
         docker tag piping-server-rust nwtgck/piping-server-rust:${GIT_BRANCH}
         docker push nwtgck/piping-server-rust:${GIT_BRANCH}
 
-  release_if_tag_exits:
+  release_if_tag_exists:
     needs:
       - cargo_fmt
       - cargo_test
