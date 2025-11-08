@@ -63,7 +63,7 @@ jobs:
           cd cross
           git checkout 36c0d7810ddde073f603c82d896c2a6c886ff7a4
           cat Cargo.lock
-          cargo install --path .
+          cargo install --path . --locked
       - run: cross build --target=${{ matrix.target }} --release --locked
       - name: Archive binary
         run: |
