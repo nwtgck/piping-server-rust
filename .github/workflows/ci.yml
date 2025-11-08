@@ -56,14 +56,16 @@ jobs:
     steps:
       - run: rustup default ${RUST_VERSION}
       - uses: actions/checkout@v4
+#      - name: Install cross
+##        run: cd /tmp && cargo install cross --git https://github.com/cross-rs/cross --rev "${CROSS_REVISION}"
+#        run: |
+#          git clone https://github.com/cross-rs/cross
+#          cd cross
+#          git checkout 36c0d7810ddde073f603c82d896c2a6c886ff7a4
+#          cat Cargo.lock
+#          cargo install --path . --locked
       - name: Install cross
-#        run: cd /tmp && cargo install cross --git https://github.com/cross-rs/cross --rev "${CROSS_REVISION}"
-        run: |
-          git clone https://github.com/cross-rs/cross
-          cd cross
-          git checkout 36c0d7810ddde073f603c82d896c2a6c886ff7a4
-          cat Cargo.lock
-          cargo install --path . --locked
+        run: cd /tmp && cargo install cross --git https://github.com/cross-rs/cross --rev "${CROSS_REVISION}" --locked
       - run: cross build --target=${{ matrix.target }} --release --locked
       - name: Archive binary
         run: |
