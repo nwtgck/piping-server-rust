@@ -57,7 +57,7 @@ jobs:
       - run: rustup default ${RUST_VERSION}
       - uses: actions/checkout@v4
       - name: Install cross
-        run: cd /tmp && cargo install cross --git https://github.com/cross-rs/cross#${CROSS_REVISION}
+        run: cd /tmp && cargo install cross --git https://github.com/cross-rs/cross --rev "${CROSS_REVISION}"
       - run: cross build --target=${{ matrix.target }} --release --locked
       - name: Archive binary
         run: |
