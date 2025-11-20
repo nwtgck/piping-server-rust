@@ -12,7 +12,7 @@ jobs:
   cargo_fmt:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - run: cargo fmt --all -- --check
 
   cargo_test:
@@ -23,14 +23,14 @@ jobs:
           - macOS-13
     runs-on: ${{ matrix.runs-on }}
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - run: cargo test -- --color=always --nocapture
 
   # MSRV (minimum supported Rust version)
   cargo_test_msrv:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - run: rustup default ${MINIMUM_SUPPORTED_RUST_VERSION}
     - run: cargo test -- --color=always --nocapture
 
@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - run: rustup default ${RUST_VERSION}
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install cross
         run: cd /tmp && cargo install cross --git https://github.com/cross-rs/cross --rev "${CROSS_REVISION}" --locked
       - run: cross build --target=${{ matrix.target }} --release --locked
@@ -142,7 +142,7 @@ jobs:
     runs-on: macOS-13
     steps:
     - run: rustup default ${RUST_VERSION}
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - run: rustup target add ${{ matrix.target }}
     - run: cargo build --target=${{ matrix.target }} --release --locked
     - name: Archive binary
@@ -160,7 +160,7 @@ jobs:
   docker:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - run: docker build -t piping-server-rust .
     - name: Create certificates
       run: cd /tmp && mkdir ssl_certs && cd ssl_certs && openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -sha256 -nodes --subj '/CN=localhost/'
