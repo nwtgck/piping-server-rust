@@ -13,7 +13,7 @@ futures = { version = "~0.3", features = ["std"] }
 tokio = { version = "~1.48", features = ["rt-multi-thread", "macros", "net"] }
 hyper = { version = "~1.8", default-features = false, features = ["server", "http1", "http2"] }
 hyper-util = { version = "~0.1", default-features = false, features = ["server-auto", "tokio"] }
-http = "~1.3"
+http = "~1.4"
 http-body = "~1.0"
 http-body-util = "~0.1"
 rustls = { version = "~0.23", default-features = false, features = ["ring", "logging", "std", "tls12"] }
